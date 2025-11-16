@@ -58,10 +58,11 @@
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: hsl(var(--border));
   }
   body {
-    @apply bg-background text-foreground;
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
   }
 }
 
@@ -95,5 +96,5 @@ body {
 
 /* Smooth transitions for theme changes */
 * {
-  @apply transition-colors duration-200;
+  transition: color 0.2s, background-color 0.2s, border-color 0.2s;
 }
