@@ -7,6 +7,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Button, Input, Label, Card, CardHeader, CardTitle, CardContent } from '@/components/ui'
 import { Eye, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -53,7 +54,7 @@ export default function LoginPage() {
           <p className="text-sm text-gray-500 dark:text-gray-400">Sign in to your account</p>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
             {error && (
               <div className="rounded-md bg-red-50 dark:bg-red-900/30 p-3 text-sm text-red-600 dark:text-red-400">
                 {error}
@@ -107,8 +108,17 @@ export default function LoginPage() {
               Sign In
             </Button>
 
-            <div className="mt-4 text-center text-sm text-gray-500 dark:text-gray-400">
-              <p>Demo Credentials:</p>
+            {/* Register Link */}
+            <div className="text-center text-sm text-gray-600 dark:text-gray-400">
+              Don&apos;t have an account?{' '}
+              <Link href="/register" className="text-blue-600 dark:text-blue-400 hover:underline">
+                Register
+              </Link>
+            </div>
+
+            {/* Demo Credentials */}
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800 text-center text-sm text-gray-500 dark:text-gray-400">
+              <p className="font-medium mb-1">Demo Credentials:</p>
               <p>Email: admin@erp.com</p>
               <p>Password: admin123</p>
             </div>

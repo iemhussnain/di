@@ -14,26 +14,26 @@ function StatCard({ title, value, change, icon: Icon, trend }) {
       <CardContent className="p-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-gray-500">{title}</p>
-            <p className="text-2xl font-bold mt-2">{value}</p>
+            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{title}</p>
+            <p className="text-2xl font-bold mt-2 text-gray-900 dark:text-gray-100">{value}</p>
             <div className="flex items-center gap-1 mt-2">
               {isPositive ? (
-                <TrendingUp className="h-4 w-4 text-green-600" />
+                <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
               ) : (
-                <TrendingDown className="h-4 w-4 text-red-600" />
+                <TrendingDown className="h-4 w-4 text-red-600 dark:text-red-400" />
               )}
               <span
                 className={`text-sm ${
-                  isPositive ? 'text-green-600' : 'text-red-600'
+                  isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                 }`}
               >
                 {change}
               </span>
-              <span className="text-sm text-gray-500">vs last month</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">vs last month</span>
             </div>
           </div>
-          <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
-            <Icon className="h-6 w-6 text-blue-600" />
+          <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+            <Icon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
           </div>
         </div>
       </CardContent>
@@ -46,8 +46,8 @@ export default function DashboardPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-gray-500 mt-1">Welcome to your ERP system overview</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
+        <p className="text-gray-500 dark:text-gray-400 mt-1">Welcome to your ERP system overview</p>
       </div>
 
       {/* Stats Grid */}
@@ -91,14 +91,14 @@ export default function DashboardPage() {
           <CardContent>
             <div className="space-y-4">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="flex items-center justify-between border-b pb-3 last:border-0">
+                <div key={i} className="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 pb-3 last:border-0">
                   <div>
-                    <p className="font-medium">Invoice #INV-2025-000{i}</p>
-                    <p className="text-sm text-gray-500">Customer ABC Corp</p>
+                    <p className="font-medium text-gray-900 dark:text-gray-100">Invoice #INV-2025-000{i}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Customer ABC Corp</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-medium">Rs. 25,000</p>
-                    <p className="text-sm text-gray-500">Today</p>
+                    <p className="font-medium text-gray-900 dark:text-gray-100">Rs. 25,000</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Today</p>
                   </div>
                 </div>
               ))}
@@ -117,16 +117,16 @@ export default function DashboardPage() {
                 { name: 'Product B', qty: 8, reorder: 15 },
                 { name: 'Product C', qty: 3, reorder: 10 },
               ].map((item, i) => (
-                <div key={i} className="flex items-center justify-between border-b pb-3 last:border-0">
+                <div key={i} className="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 pb-3 last:border-0">
                   <div>
-                    <p className="font-medium">{item.name}</p>
-                    <p className="text-sm text-gray-500">
+                    <p className="font-medium text-gray-900 dark:text-gray-100">{item.name}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
                       Reorder Level: {item.reorder}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-medium text-red-600">{item.qty} units</p>
-                    <p className="text-xs text-red-600">Low Stock</p>
+                    <p className="font-medium text-red-600 dark:text-red-400">{item.qty} units</p>
+                    <p className="text-xs text-red-600 dark:text-red-400">Low Stock</p>
                   </div>
                 </div>
               ))}
@@ -142,25 +142,25 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 md:grid-cols-4">
-            <button className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left">
-              <ShoppingCart className="h-6 w-6 text-blue-600 mb-2" />
-              <p className="font-medium">New Sale</p>
-              <p className="text-sm text-gray-500">Create invoice</p>
+            <button className="p-4 border border-gray-200 dark:border-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-left transition-colors">
+              <ShoppingCart className="h-6 w-6 text-blue-600 dark:text-blue-400 mb-2" />
+              <p className="font-medium text-gray-900 dark:text-gray-100">New Sale</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Create invoice</p>
             </button>
-            <button className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left">
-              <Package className="h-6 w-6 text-blue-600 mb-2" />
-              <p className="font-medium">New Purchase</p>
-              <p className="text-sm text-gray-500">Record purchase</p>
+            <button className="p-4 border border-gray-200 dark:border-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-left transition-colors">
+              <Package className="h-6 w-6 text-blue-600 dark:text-blue-400 mb-2" />
+              <p className="font-medium text-gray-900 dark:text-gray-100">New Purchase</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Record purchase</p>
             </button>
-            <button className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left">
-              <DollarSign className="h-6 w-6 text-blue-600 mb-2" />
-              <p className="font-medium">Receive Payment</p>
-              <p className="text-sm text-gray-500">Record payment</p>
+            <button className="p-4 border border-gray-200 dark:border-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-left transition-colors">
+              <DollarSign className="h-6 w-6 text-blue-600 dark:text-blue-400 mb-2" />
+              <p className="font-medium text-gray-900 dark:text-gray-100">Receive Payment</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Record payment</p>
             </button>
-            <button className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left">
-              <Users className="h-6 w-6 text-blue-600 mb-2" />
-              <p className="font-medium">Add Customer</p>
-              <p className="text-sm text-gray-500">New customer</p>
+            <button className="p-4 border border-gray-200 dark:border-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-left transition-colors">
+              <Users className="h-6 w-6 text-blue-600 dark:text-blue-400 mb-2" />
+              <p className="font-medium text-gray-900 dark:text-gray-100">Add Customer</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">New customer</p>
             </button>
           </div>
         </CardContent>
