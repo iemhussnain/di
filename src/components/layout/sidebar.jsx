@@ -121,8 +121,8 @@ function NavItem({ item, isOpen }) {
         className={cn(
           'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
           isActive
-            ? 'bg-blue-50 text-blue-600'
-            : 'text-gray-700 hover:bg-gray-100'
+            ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
         )}
       >
         <item.icon className="h-5 w-5" />
@@ -137,7 +137,7 @@ function NavItem({ item, isOpen }) {
         onClick={() => setExpanded(!expanded)}
         className={cn(
           'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-          'text-gray-700 hover:bg-gray-100'
+          'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
         )}
       >
         <item.icon className="h-5 w-5" />
@@ -164,8 +164,8 @@ function NavItem({ item, isOpen }) {
                 className={cn(
                   'block rounded-lg px-3 py-2 text-sm transition-colors',
                   isActive
-                    ? 'bg-blue-50 text-blue-600 font-medium'
-                    : 'text-gray-600 hover:bg-gray-100'
+                    ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                 )}
               >
                 {subItem.title}
@@ -192,7 +192,7 @@ export function Sidebar({ isOpen, onClose }) {
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed left-0 top-16 z-40 h-[calc(100vh-4rem)] border-r bg-white transition-all duration-300',
+          'fixed left-0 top-16 z-40 h-[calc(100vh-4rem)] border-r bg-white dark:bg-gray-900 dark:border-gray-800 transition-all duration-300',
           isOpen ? 'w-64' : 'w-0 lg:w-20',
           'lg:sticky'
         )}
