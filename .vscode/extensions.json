@@ -1,0 +1,37 @@
+{
+  "recommendations": [
+    // Essential
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "bradlc.vscode-tailwindcss",
+
+    // Next.js & React
+    "dsznajder.es7-react-js-snippets",
+    "formulahendry.auto-rename-tag",
+    "christian-kohler.path-intellisense",
+
+    // MongoDB
+    "mongodb.mongodb-vscode",
+
+    // Git
+    "eamodio.gitlens",
+    "mhutchie.git-graph",
+
+    // Utilities
+    "usernamehw.errorlens",
+    "streetsidesoftware.code-spell-checker",
+    "wayou.vscode-todo-highlight",
+    "gruntfuggly.todo-tree",
+    "ritwickdey.liveserver",
+
+    // Theme (optional)
+    "PKief.material-icon-theme",
+
+    // Code Quality
+    "sonarsource.sonarlint-vscode",
+
+    // REST API Testing
+    "humao.rest-client",
+    "rangav.vscode-thunder-client"
+  ]
+}
