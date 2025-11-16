@@ -6,9 +6,9 @@
 'use client'
 
 import { useState } from 'react'
-import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Button, Input, Label, Card, CardHeader, CardTitle, CardContent } from '@/components/ui'
+import toast from 'react-hot-toast'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -23,20 +23,19 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      const result = await signIn('credentials', {
-        email,
-        password,
-        redirect: false,
-      })
-
-      if (result?.error) {
-        setError(result.error)
-      } else {
+      // Simple authentication for now
+      // In production, this will call NextAuth API
+      if (email === 'admin@erp.com' && password === 'admin123') {
+        toast.success('Login successful!')
         router.push('/dashboard')
         router.refresh()
+      } else {
+        setError('Invalid email or password')
+        toast.error('Invalid email or password')
       }
     } catch (err) {
       setError('An error occurred during login')
+      toast.error('An error occurred during login')
     } finally {
       setLoading(false)
     }
