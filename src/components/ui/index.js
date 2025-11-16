@@ -1,11 +1,31 @@
 /**
- * UI Components Export
- * Centralized export for all UI components
+ * UI Components Index
+ * Export all shadcn/ui compatible components
  */
 
-export { Button } from './button'
-export { Input } from './input'
-export { Label } from './label'
-export { Select } from './select'
-export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent } from './card'
-export { Table, TableHeader, TableBody, TableFooter, TableHead, TableRow, TableCell } from './table'
+export * from './button'
+export * from './card'
+export * from './input'
+export * from './label'
+export * from './select'
+export * from './table'
+export * from './badge'
+export * from './alert'
+export * from './skeleton'
+export * from './textarea'
+export * from './checkbox'
+export * from './switch'
+export * from './dialog'
+export * from './accordion'
+export * from './separator'
+export * from './tabs'
+export * from './tooltip'
+export * from './dropdown-menu'
+export * from './popover'
+export * from './radio-group'
+export * from './hover-card'
+export * from './progress'
+export * from './avatar'
+export * from './breadcrumb'
+export * from './alert-dialog'
+export * from './scroll-area'
