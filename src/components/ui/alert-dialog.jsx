@@ -6,7 +6,6 @@
 import * as React from "react"
 import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog"
 import { cn } from "@/lib/utils"
-import { buttonVariants } from "./button"
 
 const AlertDialog = AlertDialogPrimitive.Root
 const AlertDialogTrigger = AlertDialogPrimitive.Trigger
@@ -83,7 +82,14 @@ AlertDialogDescription.displayName =
 const AlertDialogAction = React.forwardRef(({ className, ...props }, ref) => (
   <AlertDialogPrimitive.Action
     ref={ref}
-    className={cn(buttonVariants(), className)}
+    className={cn(
+      "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors",
+      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+      "disabled:pointer-events-none disabled:opacity-50",
+      "bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600",
+      "h-10 px-4 py-2",
+      className
+    )}
     {...props}
   />
 ))
@@ -93,7 +99,12 @@ const AlertDialogCancel = React.forwardRef(({ className, ...props }, ref) => (
   <AlertDialogPrimitive.Cancel
     ref={ref}
     className={cn(
-      buttonVariants({ variant: "outline" }),
+      "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors",
+      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+      "disabled:pointer-events-none disabled:opacity-50",
+      "border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800",
+      "text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700",
+      "h-10 px-4 py-2",
       "mt-2 sm:mt-0",
       className
     )}
