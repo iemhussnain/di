@@ -4,7 +4,7 @@
  */
 
 import { NextResponse } from 'next/server'
-import dbConnect from '@/lib/mongodb'
+import dbConnect from '@/lib/db/mongodb'
 import { getCurrentUserId } from '@/lib/utils/session'
 import User from '@/lib/models/User'
 import FBRInvoice from '@/lib/models/fbr/FBRInvoice'

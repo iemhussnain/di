@@ -4,19 +4,21 @@
  */
 
 import { NextResponse } from 'next/server'
-import dbConnect from '@/lib/mongodb'
-import { getCurrentUserId } from '@/lib/utils/session'
+import dbConnect from '@/lib/db/mongodb'
+import { getToken } from 'next-auth/jwt'
 import User from '@/lib/models/User'
 
 export async function GET(request) {
   try {
+    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     await dbConnect()
 
-    // Get current user ID
-    const userId = await getCurrentUserId()
-
     // Fetch user with selected fields (exclude password, include tokens)
-    const user = await User.findById(userId)
+    const user = await User.findById(token.id)
       .select('-password +fbr_sandbox_token +fbr_production_token')
 
     if (!user) {
@@ -56,10 +58,12 @@ export async function GET(request) {
 
 export async function PUT(request) {
   try {
-    await dbConnect()
+    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
-    // Get current user ID
-    const userId = await getCurrentUserId()
+    await dbConnect()
 
     // Get updated data from request
     const updateData = await request.json()
@@ -117,7 +121,7 @@ export async function PUT(request) {
 
     // Update user
     const updatedUser = await User.findByIdAndUpdate(
-      userId,
+      token.id,
       { $set: filteredData },
       { new: true, runValidators: true }
     ).select('-password +fbr_sandbox_token +fbr_production_token')
