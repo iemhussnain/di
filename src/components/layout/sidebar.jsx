@@ -35,7 +35,8 @@ const menuItems = [
     icon: ShoppingCart,
     subItems: [
       { title: 'Orders', href: '/sales/orders' },
-      { title: 'Invoices', href: '/sales/invoices' },
+      { title: 'Registered Invoices', href: '/sales/registered-invoices' },
+      { title: 'Unregistered Invoices', href: '/sales/unregistered-invoices' },
       { title: 'Customers', href: '/sales/customers' },
       { title: 'Payments', href: '/sales/payments' },
       { title: 'Analytics', href: '/sales/analytics' },
@@ -45,6 +46,8 @@ const menuItems = [
     title: 'Purchases',
     icon: ShoppingBag,
     subItems: [
+      { title: 'Purchase Orders', href: '/purchases/orders' },
+      { title: 'Purchase Invoices', href: '/purchases/invoices' },
       { title: 'Vendors', href: '/purchases/vendors' },
     ],
   },
@@ -74,6 +77,9 @@ const menuItems = [
     icon: Users,
     subItems: [
       { title: 'Employees', href: '/hr/employees' },
+      { title: 'Attendance', href: '/hr/attendance' },
+      { title: 'Leave Management', href: '/hr/leaves' },
+      { title: 'Payroll', href: '/hr/payroll' },
     ],
   },
   {
