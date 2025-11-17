@@ -3,39 +3,85 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { Settings, Plus } from 'lucide-react'
 
 export default function NewRegisteredInvoicePage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [customers, setCustomers] = useState([])
   const [items, setItems] = useState([])
-  const [selectedCustomer, setSelectedCustomer] = useState(null)
-  const [formData, setFormData] = useState({
-    customer_id: '',
-    invoice_date: new Date().toISOString().split('T')[0],
-    due_date: '',
-    payment_terms: '',
-    notes: '',
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filteredCustomers, setFilteredCustomers] = useState([])
+
+  // Seller Information
+  const [sellerInfo, setSellerInfo] = useState({
+    ntn_cnic: '1234567',
+    business_name: 'SUnny',
+    province: 'Punjab',
+    address: 'lsajflafjsikd,alsksjdlfasjk'
   })
-  const [invoiceItems, setInvoiceItems] = useState([
-    {
-      item_id: '',
-      description: '',
-      quantity: 1,
-      unit_price: 0,
-      discount_percentage: 0,
-      tax_percentage: 18, // Default GST
-    },
-  ])
+
+  // Buyer Information
+  const [buyerInfo, setBuyerInfo] = useState({
+    ntn_cnic: '',
+    province: '',
+    address: '',
+    registration_type: ''
+  })
+
+  // Invoice Details
+  const [invoiceDetails, setInvoiceDetails] = useState({
+    invoice_type: '',
+    invoice_date: new Date().toISOString().split('T')[0],
+    local_invoice_number: ''
+  })
+
+  // Product Details
+  const [productDetails, setProductDetails] = useState({
+    stock_item: '',
+    hs_code: '',
+    sale_type: '',
+    unit_of_measurement: '',
+    rate: '',
+    quantity: 0,
+    description: ''
+  })
+
+  // Financial Details
+  const [financialDetails, setFinancialDetails] = useState({
+    value_sales_excluding_st: '0.00',
+    sales_tax_applicable: '0.00',
+    total_values: '0.00',
+    fixed_notified_value_retail_price: '0.00',
+    sales_tax_withheld_at_source: '0.00',
+    extra_tax: '0.00',
+    further_tax: '0.00',
+    sro_schedule_number: '',
+    fed_payable: '0.00',
+    sro_item_serial_number: '',
+    discount: '0.00'
+  })
 
   useEffect(() => {
     fetchRegisteredCustomers()
     fetchItems()
   }, [])
 
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      const filtered = customers.filter(customer =>
+        customer.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        customer.ntn?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        customer.customer_code?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+      setFilteredCustomers(filtered)
+    } else {
+      setFilteredCustomers([])
+    }
+  }, [searchQuery, customers])
+
   const fetchRegisteredCustomers = async () => {
     try {
-      // Only fetch customers with NTN or STRN (registered)
       const res = await fetch('/api/customers/registered')
       const data = await res.json()
       if (data.success) {
@@ -58,477 +104,624 @@ export default function NewRegisteredInvoicePage() {
     }
   }
 
-  const handleCustomerChange = (customerId) => {
-    const customer = customers.find(c => c._id === customerId)
-    setSelectedCustomer(customer)
-    setFormData({
-      ...formData,
-      customer_id: customerId,
+  const handleCustomerSelect = (customer) => {
+    setBuyerInfo({
+      ntn_cnic: customer.ntn || customer.customer_code || '',
+      province: customer.province || '',
+      address: customer.address || '',
+      registration_type: customer.ntn ? 'NTN' : 'STRN'
     })
+    setSearchQuery(customer.name)
+    setFilteredCustomers([])
   }
 
-  const addItem = () => {
-    setInvoiceItems([
-      ...invoiceItems,
-      {
-        item_id: '',
-        description: '',
-        quantity: 1,
-        unit_price: 0,
-        discount_percentage: 0,
-        tax_percentage: 18,
-      },
-    ])
-  }
-
-  const removeItem = (index) => {
-    setInvoiceItems(invoiceItems.filter((_, i) => i !== index))
-  }
-
-  const updateItem = (index, field, value) => {
-    const updated = [...invoiceItems]
-    updated[index][field] = value
-
-    if (field === 'item_id') {
-      const selectedItem = items.find(item => item._id === value)
-      if (selectedItem) {
-        updated[index].description = selectedItem.description || selectedItem.name
-        updated[index].unit_price = selectedItem.sale_price || 0
-      }
+  const handleStockItemChange = (itemId) => {
+    const selectedItem = items.find(item => item._id === itemId)
+    if (selectedItem) {
+      setProductDetails({
+        ...productDetails,
+        stock_item: itemId,
+        description: selectedItem.description || selectedItem.name,
+        rate: selectedItem.sale_price || 0,
+        hs_code: selectedItem.hs_code || ''
+      })
     }
-
-    if (['quantity', 'unit_price', 'discount_percentage', 'tax_percentage'].includes(field)) {
-      const qty = parseFloat(updated[index].quantity) || 0
-      const price = parseFloat(updated[index].unit_price) || 0
-      const discountPct = parseFloat(updated[index].discount_percentage) || 0
-      const taxPct = parseFloat(updated[index].tax_percentage) || 0
-
-      const subtotal = qty * price
-      const discountAmount = (subtotal * discountPct) / 100
-      const taxableAmount = subtotal - discountAmount
-      const taxAmount = (taxableAmount * taxPct) / 100
-      const lineTotal = taxableAmount + taxAmount
-
-      updated[index].discount_amount = discountAmount
-      updated[index].tax_amount = taxAmount
-      updated[index].line_total = lineTotal
-    }
-
-    setInvoiceItems(updated)
   }
 
-  const calculateTotals = () => {
-    let subtotal = 0
-    let totalDiscount = 0
-    let totalTax = 0
-    let total = 0
+  const calculateFinancials = () => {
+    const qty = parseFloat(productDetails.quantity) || 0
+    const rate = parseFloat(productDetails.rate) || 0
+    const discount = parseFloat(financialDetails.discount) || 0
 
-    invoiceItems.forEach(item => {
-      const qty = parseFloat(item.quantity) || 0
-      const price = parseFloat(item.unit_price) || 0
-      const discountPct = parseFloat(item.discount_percentage) || 0
-      const taxPct = parseFloat(item.tax_percentage) || 0
+    const valueSalesExcludingST = qty * rate
+    const salesTaxApplicable = valueSalesExcludingST * 0.18 // 18% GST
+    const totalValues = valueSalesExcludingST + salesTaxApplicable - discount
 
-      const itemSubtotal = qty * price
-      const discountAmount = (itemSubtotal * discountPct) / 100
-      const taxableAmount = itemSubtotal - discountAmount
-      const taxAmount = (taxableAmount * taxPct) / 100
-
-      subtotal += itemSubtotal
-      totalDiscount += discountAmount
-      totalTax += taxAmount
-      total += taxableAmount + taxAmount
-    })
-
-    return { subtotal, totalDiscount, totalTax, total }
+    setFinancialDetails(prev => ({
+      ...prev,
+      value_sales_excluding_st: valueSalesExcludingST.toFixed(2),
+      sales_tax_applicable: salesTaxApplicable.toFixed(2),
+      total_values: totalValues.toFixed(2)
+    }))
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  useEffect(() => {
+    calculateFinancials()
+  }, [productDetails.quantity, productDetails.rate, financialDetails.discount])
 
-    if (!selectedCustomer?.ntn && !selectedCustomer?.strn) {
-      alert('Customer must have NTN or STRN for FBR registered invoice!')
-      return
-    }
-
+  const handleSaveInvoice = async () => {
     setLoading(true)
-
     try {
-      const totals = calculateTotals()
-
-      const lines = invoiceItems.map(item => ({
-        item_id: item.item_id,
-        description: item.description,
-        quantity: parseFloat(item.quantity),
-        unit_price: parseFloat(item.unit_price),
-        discount_percentage: parseFloat(item.discount_percentage) || 0,
-        discount_amount: item.discount_amount || 0,
-        tax_percentage: parseFloat(item.tax_percentage) || 0,
-        tax_amount: item.tax_amount || 0,
-        line_total: item.line_total || 0,
-      }))
-
       const payload = {
-        customer_id: formData.customer_id,
-        customer_name: selectedCustomer?.name,
-        customer_code: selectedCustomer?.customer_code,
-        customer_ntn: selectedCustomer?.ntn || '',
-        customer_strn: selectedCustomer?.strn || '',
-        is_registered: true, // Force registered
-        invoice_date: formData.invoice_date,
-        due_date: formData.due_date,
-        payment_terms: formData.payment_terms,
-        lines: lines,
-        subtotal: totals.subtotal,
-        discount_amount: totals.totalDiscount,
-        tax_amount: totals.totalTax,
-        total_amount: totals.total,
-        notes: formData.notes,
-        status: 'Draft',
+        seller: sellerInfo,
+        buyer: buyerInfo,
+        invoice: invoiceDetails,
+        product: productDetails,
+        financial: financialDetails,
+        status: 'Draft'
       }
 
-      const res = await fetch('/api/sales-invoices', {
+      const res = await fetch('/api/sales-invoices/fbr', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(payload)
       })
 
       const data = await res.json()
 
       if (data.success) {
-        alert('Registered Sales Invoice created successfully!')
-        router.push(`/sales/registered-invoices/${data.data._id}`)
+        alert('Invoice saved successfully!')
+        router.push('/sales/registered-invoices')
       } else {
-        alert(data.error || 'Failed to create invoice')
+        alert(data.error || 'Failed to save invoice')
       }
     } catch (error) {
-      console.error('Error creating invoice:', error)
-      alert('Failed to create invoice')
+      console.error('Error saving invoice:', error)
+      alert('Failed to save invoice')
     } finally {
       setLoading(false)
     }
   }
 
-  const totals = calculateTotals()
+  const handleSendToFBR = async () => {
+    setLoading(true)
+    try {
+      const payload = {
+        seller: sellerInfo,
+        buyer: buyerInfo,
+        invoice: invoiceDetails,
+        product: productDetails,
+        financial: financialDetails,
+        status: 'Sent to FBR'
+      }
+
+      const res = await fetch('/api/sales-invoices/fbr/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+
+      const data = await res.json()
+
+      if (data.success) {
+        alert('Invoice sent to FBR successfully!')
+        router.push('/sales/registered-invoices')
+      } else {
+        alert(data.error || 'Failed to send to FBR')
+      }
+    } catch (error) {
+      console.error('Error sending to FBR:', error)
+      alert('Failed to send to FBR')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            New Registered Sales Invoice (FBR)
-          </h1>
-          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-            Create FBR compliant invoice for registered customers
-          </p>
-        </div>
-        <Link
-          href="/sales/registered-invoices"
-          className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
-        >
-          Cancel
-        </Link>
-      </div>
-
-      {customers.length === 0 && (
-        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-          <p className="text-yellow-800 dark:text-yellow-200">
-            ⚠️ No registered customers found. Please add customers with NTN/STRN first.
-          </p>
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Customer & Invoice Details */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Invoice Details
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Registered Customer (FBR) *
-              </label>
-              <select
-                required
-                value={formData.customer_id}
-                onChange={(e) => handleCustomerChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-              >
-                <option value="">Select Registered Customer</option>
-                {customers.map(customer => (
-                  <option key={customer._id} value={customer._id}>
-                    {customer.name} ({customer.customer_code}) - {customer.ntn ? `NTN: ${customer.ntn}` : `STRN: ${customer.strn}`}
-                  </option>
-                ))}
-              </select>
-              {selectedCustomer && (
-                <div className="mt-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded text-sm">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="px-2 py-1 bg-green-600 text-white text-xs rounded font-medium">
-                      ✓ FBR REGISTERED
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {selectedCustomer.ntn && (
-                      <div>
-                        <span className="text-gray-600 dark:text-gray-400">NTN:</span>{' '}
-                        <span className="font-medium">{selectedCustomer.ntn}</span>
-                      </div>
-                    )}
-                    {selectedCustomer.strn && (
-                      <div>
-                        <span className="text-gray-600 dark:text-gray-400">STRN:</span>{' '}
-                        <span className="font-medium">{selectedCustomer.strn}</span>
-                      </div>
-                    )}
-                    {selectedCustomer.phone && (
-                      <div>
-                        <span className="text-gray-600 dark:text-gray-400">Phone:</span>{' '}
-                        <span className="font-medium">{selectedCustomer.phone}</span>
-                      </div>
-                    )}
-                    {selectedCustomer.email && (
-                      <div>
-                        <span className="text-gray-600 dark:text-gray-400">Email:</span>{' '}
-                        <span className="font-medium">{selectedCustomer.email}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Invoice Date *
-              </label>
-              <input
-                type="date"
-                required
-                value={formData.invoice_date}
-                onChange={(e) => setFormData({ ...formData, invoice_date: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Due Date *
-              </label>
-              <input
-                type="date"
-                required
-                value={formData.due_date}
-                onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Payment Terms
-              </label>
-              <select
-                value={formData.payment_terms}
-                onChange={(e) => setFormData({ ...formData, payment_terms: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-              >
-                <option value="">Select Terms</option>
-                <option value="Cash">Cash</option>
-                <option value="Net 7">Net 7 Days</option>
-                <option value="Net 15">Net 15 Days</option>
-                <option value="Net 30">Net 30 Days</option>
-                <option value="Net 60">Net 60 Days</option>
-                <option value="Net 90">Net 90 Days</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Invoice Items - Same as before */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Invoice Items
-            </h2>
-            <button
-              type="button"
-              onClick={addItem}
-              className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-6">
+          <div className="flex justify-between items-center mb-2">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              Sale Invoice
+            </h1>
+            <Link
+              href="/sales/registered-invoices"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
-              + Add Item
-            </button>
+              View All Invoices
+            </Link>
           </div>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Create and send invoices directly to FBR using your production token
+          </p>
+        </div>
 
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead className="bg-gray-50 dark:bg-gray-900">
-                <tr>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Item</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Description</th>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400">Qty</th>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400">Price</th>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400">Disc %</th>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400">GST %</th>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400">Total</th>
-                  <th className="px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {invoiceItems.map((item, index) => (
-                  <tr key={index}>
-                    <td className="px-3 py-2">
-                      <select
-                        required
-                        value={item.item_id}
-                        onChange={(e) => updateItem(index, 'item_id', e.target.value)}
-                        className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                      >
-                        <option value="">Select</option>
-                        {items.map(itm => (
-                          <option key={itm._id} value={itm._id}>{itm.name}</option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="px-3 py-2">
-                      <input
-                        type="text"
-                        value={item.description}
-                        onChange={(e) => updateItem(index, 'description', e.target.value)}
-                        className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                      />
-                    </td>
-                    <td className="px-3 py-2">
-                      <input
-                        type="number"
-                        required
-                        min="0.01"
-                        step="0.01"
-                        value={item.quantity}
-                        onChange={(e) => updateItem(index, 'quantity', e.target.value)}
-                        className="w-20 px-2 py-1 text-sm text-right border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                      />
-                    </td>
-                    <td className="px-3 py-2">
-                      <input
-                        type="number"
-                        required
-                        min="0"
-                        step="0.01"
-                        value={item.unit_price}
-                        onChange={(e) => updateItem(index, 'unit_price', e.target.value)}
-                        className="w-24 px-2 py-1 text-sm text-right border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                      />
-                    </td>
-                    <td className="px-3 py-2">
-                      <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="0.01"
-                        value={item.discount_percentage}
-                        onChange={(e) => updateItem(index, 'discount_percentage', e.target.value)}
-                        className="w-16 px-2 py-1 text-sm text-right border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                      />
-                    </td>
-                    <td className="px-3 py-2">
-                      <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="0.01"
-                        value={item.tax_percentage}
-                        onChange={(e) => updateItem(index, 'tax_percentage', e.target.value)}
-                        className="w-16 px-2 py-1 text-sm text-right border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                      />
-                    </td>
-                    <td className="px-3 py-2 text-right text-sm font-medium">
-                      Rs. {(item.line_total || 0).toFixed(2)}
-                    </td>
-                    <td className="px-3 py-2">
-                      {invoiceItems.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeItem(index)}
-                          className="text-red-600 hover:text-red-800 text-sm"
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        {/* Note */}
+        <div className="mb-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <p className="text-sm text-blue-800 dark:text-blue-200">
+            <strong>Note:</strong> Invoices created here will be saved to your database. You can save as draft and send to FBR later, or send directly. Once sent to FBR, the invoice will be locked and cannot be edited.
+          </p>
+        </div>
 
-          {/* Totals */}
-          <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-4">
-            <div className="flex justify-end">
-              <div className="w-80 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Subtotal:</span>
-                  <span className="font-medium text-gray-900 dark:text-white">
-                    Rs. {totals.subtotal.toFixed(2)}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Discount:</span>
-                  <span className="font-medium text-red-600">
-                    - Rs. {totals.totalDiscount.toFixed(2)}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">GST/Tax:</span>
-                  <span className="font-medium text-gray-900 dark:text-white">
-                    Rs. {totals.totalTax.toFixed(2)}
-                  </span>
-                </div>
-                <div className="flex justify-between text-lg font-bold border-t border-gray-200 dark:border-gray-700 pt-2">
-                  <span className="text-gray-900 dark:text-white">Total Amount:</span>
-                  <span className="text-blue-600">
-                    Rs. {totals.total.toFixed(2)}
-                  </span>
-                </div>
+        <div className="space-y-6">
+          {/* Seller Information */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              Seller Information
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Seller NTN/CNIC
+                </label>
+                <input
+                  type="text"
+                  value={sellerInfo.ntn_cnic}
+                  onChange={(e) => setSellerInfo({ ...sellerInfo, ntn_cnic: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Seller Business Name
+                </label>
+                <input
+                  type="text"
+                  value={sellerInfo.business_name}
+                  onChange={(e) => setSellerInfo({ ...sellerInfo, business_name: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Seller Province
+                </label>
+                <input
+                  type="text"
+                  value={sellerInfo.province}
+                  onChange={(e) => setSellerInfo({ ...sellerInfo, province: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Seller Address
+                </label>
+                <input
+                  type="text"
+                  value={sellerInfo.address}
+                  onChange={(e) => setSellerInfo({ ...sellerInfo, address: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                />
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Notes */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Additional Information
-          </h2>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Notes / Terms & Conditions
-            </label>
-            <textarea
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              rows={4}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-              placeholder="Any additional notes, terms & conditions..."
-            />
+          {/* Buyer Information */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Buyer Information
+              </h2>
+              <Link
+                href="/sales/customers/new"
+                className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-1 text-sm"
+              >
+                <Plus className="w-4 h-4" />
+                Add New Buyer
+              </Link>
+            </div>
+
+            {/* Search Buyer */}
+            <div className="mb-4 relative">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Search Buyer <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Type to search buyer by name or NTN/CNIC"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              />
+              {filteredCustomers.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                  {filteredCustomers.map((customer) => (
+                    <div
+                      key={customer._id}
+                      onClick={() => handleCustomerSelect(customer)}
+                      className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer"
+                    >
+                      <div className="font-medium text-gray-900 dark:text-white">
+                        {customer.name}
+                      </div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        {customer.customer_code} {customer.ntn ? `- NTN: ${customer.ntn}` : ''}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Buyer NTN/CNIC <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={buyerInfo.ntn_cnic}
+                  onChange={(e) => setBuyerInfo({ ...buyerInfo, ntn_cnic: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Buyer Province <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={buyerInfo.province}
+                  onChange={(e) => setBuyerInfo({ ...buyerInfo, province: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Buyer Address <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={buyerInfo.address}
+                  onChange={(e) => setBuyerInfo({ ...buyerInfo, address: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Buyer Registration Type <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={buyerInfo.registration_type}
+                  onChange={(e) => setBuyerInfo({ ...buyerInfo, registration_type: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Invoice Details */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              Invoice Details
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Invoice Type <span className="text-red-500">*</span>
+                </label>
+                <select
+                  required
+                  value={invoiceDetails.invoice_type}
+                  onChange={(e) => setInvoiceDetails({ ...invoiceDetails, invoice_type: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                >
+                  <option value="">Select invoice type</option>
+                  <option value="B2B">B2B (Business to Business)</option>
+                  <option value="B2C">B2C (Business to Consumer)</option>
+                  <option value="Export">Export</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Invoice Date <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={invoiceDetails.invoice_date}
+                  onChange={(e) => setInvoiceDetails({ ...invoiceDetails, invoice_date: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Local Invoice Number
+                </label>
+                <input
+                  type="text"
+                  placeholder="Enter invoice number (e.g., 1, 5, 555, 893356)"
+                  value={invoiceDetails.local_invoice_number}
+                  onChange={(e) => setInvoiceDetails({ ...invoiceDetails, local_invoice_number: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Product Details */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Product Details
+              </h2>
+              <button className="px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-1 text-sm">
+                <Settings className="w-4 h-4" />
+                Manage Stock
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Select Stock Item (Optional - Auto-fills HS Code)
+              </label>
+              <input
+                type="text"
+                placeholder="Type to search stock items"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  HS Code <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Type HS code"
+                  value={productDetails.hs_code}
+                  onChange={(e) => setProductDetails({ ...productDetails, hs_code: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Sale Type <span className="text-red-500">*</span>
+                </label>
+                <select
+                  required
+                  value={productDetails.sale_type}
+                  onChange={(e) => setProductDetails({ ...productDetails, sale_type: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                >
+                  <option value="">Select sale type</option>
+                  <option value="Standard">Standard</option>
+                  <option value="Zero Rated">Zero Rated</option>
+                  <option value="Exempt">Exempt</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Unit of Measurement <span className="text-red-500">*</span>
+                </label>
+                <select
+                  required
+                  value={productDetails.unit_of_measurement}
+                  onChange={(e) => setProductDetails({ ...productDetails, unit_of_measurement: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                >
+                  <option value="">Select UoM</option>
+                  <option value="PCS">PCS (Pieces)</option>
+                  <option value="KG">KG (Kilogram)</option>
+                  <option value="L">L (Liter)</option>
+                  <option value="M">M (Meter)</option>
+                  <option value="BOX">BOX</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Rate <span className="text-red-500">*</span>
+                </label>
+                <select
+                  required
+                  value={productDetails.rate}
+                  onChange={(e) => setProductDetails({ ...productDetails, rate: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                >
+                  <option value="">Select rate</option>
+                  <option value="18">18% (Standard)</option>
+                  <option value="0">0% (Zero Rated)</option>
+                  <option value="exempt">Exempt</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Quantity <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  step="0.01"
+                  value={productDetails.quantity}
+                  onChange={(e) => setProductDetails({ ...productDetails, quantity: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Product Description
+              </label>
+              <textarea
+                rows={3}
+                value={productDetails.description}
+                onChange={(e) => setProductDetails({ ...productDetails, description: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+          </div>
+
+          {/* Financial Details */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              Financial Details
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Value Sales Excluding ST <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={financialDetails.value_sales_excluding_st}
+                  readOnly
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Sales Tax Applicable
+                </label>
+                <input
+                  type="text"
+                  value={financialDetails.sales_tax_applicable}
+                  readOnly
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Total Values <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={financialDetails.total_values}
+                  readOnly
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Fixed Notified Value/Retail Price
+                </label>
+                <input
+                  type="text"
+                  value={financialDetails.fixed_notified_value_retail_price}
+                  onChange={(e) => setFinancialDetails({ ...financialDetails, fixed_notified_value_retail_price: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Sales Tax Withheld at Source
+                </label>
+                <input
+                  type="text"
+                  value={financialDetails.sales_tax_withheld_at_source}
+                  onChange={(e) => setFinancialDetails({ ...financialDetails, sales_tax_withheld_at_source: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Extra Tax
+                </label>
+                <input
+                  type="text"
+                  value={financialDetails.extra_tax}
+                  onChange={(e) => setFinancialDetails({ ...financialDetails, extra_tax: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Further Tax
+                </label>
+                <input
+                  type="text"
+                  value={financialDetails.further_tax}
+                  onChange={(e) => setFinancialDetails({ ...financialDetails, further_tax: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  SRO Schedule Number
+                </label>
+                <input
+                  type="text"
+                  placeholder="Enter SRO Schedule Number"
+                  value={financialDetails.sro_schedule_number}
+                  onChange={(e) => setFinancialDetails({ ...financialDetails, sro_schedule_number: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  FED Payable
+                </label>
+                <input
+                  type="text"
+                  value={financialDetails.fed_payable}
+                  onChange={(e) => setFinancialDetails({ ...financialDetails, fed_payable: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  SRO Item Serial Number
+                </label>
+                <input
+                  type="text"
+                  placeholder="Enter SRO Item Serial Number"
+                  value={financialDetails.sro_item_serial_number}
+                  onChange={(e) => setFinancialDetails({ ...financialDetails, sro_item_serial_number: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Discount
+                </label>
+                <input
+                  type="text"
+                  value={financialDetails.discount}
+                  onChange={(e) => setFinancialDetails({ ...financialDetails, discount: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex justify-start gap-3 pb-8">
+            <button
+              onClick={handleSaveInvoice}
+              disabled={loading}
+              className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            >
+              {loading ? 'Saving...' : 'Save Invoice'}
+            </button>
+            <button
+              onClick={handleSendToFBR}
+              disabled={loading}
+              className="px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            >
+              {loading ? 'Sending...' : 'Send to FBR'}
+            </button>
           </div>
         </div>
 
-        {/* Submit */}
-        <div className="flex justify-end gap-3">
-          <Link
-            href="/sales/registered-invoices"
-            className="px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
-          >
-            Cancel
-          </Link>
-          <button
-            type="submit"
-            disabled={loading || invoiceItems.length === 0 || !formData.customer_id}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Creating...' : 'Create Registered Invoice'}
-          </button>
+        {/* Footer */}
+        <div className="mt-8 text-center text-sm text-gray-600 dark:text-gray-400 pb-8">
+          © 2025 All rights reserved. | Digital Invoice Management System
         </div>
-      </form>
+      </div>
     </div>
   )
 }
