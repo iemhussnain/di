@@ -3,7 +3,7 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import dbConnect from '@/lib/db/mongodb'
 import User from '@/lib/models/User'
 
-export const authOptions = {
+const authConfig = {
   providers: [
     CredentialsProvider({
       name: 'Credentials',
@@ -17,7 +17,7 @@ export const authOptions = {
         }
 
         await dbConnect()
-        
+
         const user = await User.findByEmail(credentials.email)
 
         if (!user) {
@@ -82,13 +82,10 @@ export const authOptions = {
   secret: process.env.NEXTAUTH_SECRET || 'your-secret-key-change-this-in-production',
 }
 
-const handler = NextAuth(authOptions)
+// Export authOptions for use in other files if needed
+export const authOptions = authConfig
 
-// Export GET and POST handlers
-export async function GET(req, ctx) {
-  return handler(req, ctx)
-}
-
-export async function POST(req, ctx) {
-  return handler(req, ctx)
-}
+// NextAuth v5 returns an object with handlers, signIn, signOut, auth
+const { handlers, auth, signIn, signOut } = NextAuth(authConfig)
+export { auth, signIn, signOut }
+export const { GET, POST } = handlers
