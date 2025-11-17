@@ -217,6 +217,34 @@ const SalesInvoiceSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+
+    // FBR Integration Fields
+    is_registered_sale: {
+      type: Boolean,
+      default: true,
+      index: true,
+    },
+    fbr_invoice_number: {
+      type: String,
+      index: true,
+    },
+    fbr_invoice_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'FBRInvoice',
+    },
+    fbr_status: {
+      type: String,
+      enum: ['Not Submitted', 'Pending', 'Valid', 'Invalid', 'Error'],
+      default: 'Not Submitted',
+    },
+    fbr_locked: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    fbr_submitted_at: {
+      type: Date,
+    },
   },
   {
     timestamps: true,
@@ -235,7 +263,7 @@ SalesInvoiceSchema.index({ createdAt: -1 })
 
 // Virtual: Is editable
 SalesInvoiceSchema.virtual('is_editable').get(function () {
-  return this.status === 'Draft' && !this.posted
+  return this.status === 'Draft' && !this.posted && !this.fbr_locked
 })
 
 // Virtual: Can be posted
@@ -341,26 +369,51 @@ SalesInvoiceSchema.pre('save', function (next) {
   next()
 })
 
-// Prevent editing if posted
+// Prevent editing if posted or FBR locked
 SalesInvoiceSchema.pre('save', function (next) {
-  if (!this.isNew && this.isModified() && this.posted) {
-    // Allow payment and status field updates
-    const modifiedPaths = this.modifiedPaths()
-    const allowedPaths = [
-      'status',
-      'amount_paid',
-      'amount_due',
-      'cancelled_by',
-      'cancelled_at',
-      'cancellation_reason',
-    ]
+  if (!this.isNew && this.isModified()) {
+    // Check FBR lock first
+    if (this.fbr_locked) {
+      const modifiedPaths = this.modifiedPaths()
+      const allowedPathsWhenLocked = [
+        'status',
+        'amount_paid',
+        'amount_due',
+      ]
 
-    const hasUnallowedChanges = modifiedPaths.some(
-      (path) => !allowedPaths.some((allowed) => path.startsWith(allowed))
-    )
+      const hasUnallowedChanges = modifiedPaths.some(
+        (path) => !allowedPathsWhenLocked.some((allowed) => path.startsWith(allowed))
+      )
 
-    if (hasUnallowedChanges) {
-      return next(new Error('Cannot modify posted invoice. Only payment updates are allowed.'))
+      if (hasUnallowedChanges) {
+        return next(new Error('Cannot modify FBR locked invoice. This invoice is locked by FBR.'))
+      }
+    }
+
+    // Check posted status
+    if (this.posted) {
+      const modifiedPaths = this.modifiedPaths()
+      const allowedPaths = [
+        'status',
+        'amount_paid',
+        'amount_due',
+        'cancelled_by',
+        'cancelled_at',
+        'cancellation_reason',
+        'fbr_invoice_number',
+        'fbr_invoice_id',
+        'fbr_status',
+        'fbr_locked',
+        'fbr_submitted_at',
+      ]
+
+      const hasUnallowedChanges = modifiedPaths.some(
+        (path) => !allowedPaths.some((allowed) => path.startsWith(allowed))
+      )
+
+      if (hasUnallowedChanges) {
+        return next(new Error('Cannot modify posted invoice. Only payment and FBR updates are allowed.'))
+      }
     }
   }
   next()
@@ -406,6 +459,10 @@ SalesInvoiceSchema.methods.cancelInvoice = async function (userId, reason) {
     throw new Error('Invoice is already cancelled')
   }
 
+  if (this.fbr_locked) {
+    throw new Error('Cannot cancel FBR locked invoice')
+  }
+
   if (this.amount_paid > 0) {
     throw new Error('Cannot cancel invoice with payments. Please reverse payments first.')
   }
@@ -415,6 +472,23 @@ SalesInvoiceSchema.methods.cancelInvoice = async function (userId, reason) {
   this.cancelled_at = new Date()
   this.cancellation_reason = reason
 
+  return this.save()
+}
+
+// Instance method: Lock for FBR
+SalesInvoiceSchema.methods.lockForFBR = async function (fbrInvoiceNumber, fbrInvoiceId) {
+  this.fbr_locked = true
+  this.fbr_invoice_number = fbrInvoiceNumber
+  this.fbr_invoice_id = fbrInvoiceId
+  this.fbr_status = 'Valid'
+  return this.save()
+}
+
+// Instance method: Update FBR status
+SalesInvoiceSchema.methods.updateFBRStatus = async function (status, fbrInvoiceId) {
+  this.fbr_status = status
+  this.fbr_invoice_id = fbrInvoiceId
+  this.fbr_submitted_at = new Date()
   return this.save()
 }
 

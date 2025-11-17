@@ -118,6 +118,11 @@ ItemSchema.virtual('total_qty').get(function () {
   return this.registered_qty + this.unregistered_qty
 })
 
+// Virtual: Current Stock (alias for total_qty for backward compatibility)
+ItemSchema.virtual('current_stock').get(function () {
+  return this.total_qty
+})
+
 // Virtual: Total Value
 ItemSchema.virtual('total_value').get(function () {
   return this.registered_qty * this.cost_registered + this.unregistered_qty * this.cost_unregistered
