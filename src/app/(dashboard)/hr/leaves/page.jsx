@@ -1,92 +1,47 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
+import { useLeaves, useApproveLeave, useRejectLeave } from '@/hooks/useLeaves'
 
 export default function LeavesPage() {
   const router = useRouter()
   const { data: session } = useSession()
-  const [leaves, setLeaves] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
   const [filters, setFilters] = useState({
     status: '',
     leave_type: '',
   })
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 20,
-    total: 0,
-    pages: 0,
-  })
 
-  useEffect(() => {
-    fetchLeaves()
-  }, [filters, pagination.page])
+  // React Query hooks
+  const { data, isLoading, error, refetch } = useLeaves(
+    {
+      status: filters.status || undefined,
+      leave_type: filters.leave_type || undefined,
+    },
+    { page: currentPage, limit: 20 }
+  )
 
-  const fetchLeaves = async () => {
-    try {
-      setLoading(true)
-      const params = new URLSearchParams({
-        page: pagination.page.toString(),
-        limit: pagination.limit.toString(),
-        ...Object.fromEntries(
-          Object.entries(filters).filter(([_, v]) => v)
-        ),
-      })
+  const approveLeave = useApproveLeave()
+  const rejectLeave = useRejectLeave()
 
-      const res = await fetch(`/api/leaves?${params}`)
-      const data = await res.json()
-
-      if (data.success) {
-        setLeaves(data.data)
-        setPagination(prev => ({ ...prev, ...data.pagination }))
-      }
-    } catch (error) {
-      console.error('Error fetching leaves:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  // Extract data
+  const leaves = data?.data || []
+  const pagination = data?.pagination || { page: 1, limit: 20, total: 0, pages: 0 }
 
   const handleApprove = async (id) => {
     if (!confirm('Are you sure you want to approve this leave application?')) return
 
-    try {
-      const res = await fetch(`/api/leaves/${id}/approve`, { method: 'POST' })
-      const data = await res.json()
-      if (data.success) {
-        alert(data.message)
-        fetchLeaves()
-      } else {
-        alert(data.error)
-      }
-    } catch (error) {
-      alert('Failed to approve leave')
-    }
+    approveLeave.mutate(id)
   }
 
   const handleReject = async (id) => {
     const reason = prompt('Enter rejection reason:')
     if (!reason) return
 
-    try {
-      const res = await fetch(`/api/leaves/${id}/reject`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason }),
-      })
-      const data = await res.json()
-      if (data.success) {
-        alert(data.message)
-        fetchLeaves()
-      } else {
-        alert(data.error)
-      }
-    } catch (error) {
-      alert('Failed to reject leave')
-    }
+    rejectLeave.mutate({ leaveId: id, reason })
   }
 
   const getStatusBadge = (status) => {
@@ -131,6 +86,19 @@ export default function LeavesPage() {
           </Link>
         </div>
       </div>
+
+      {/* Error Alert */}
+      {error && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+          <p className="text-red-800 dark:text-red-200">Failed to load leaves: {error.message}</p>
+          <button
+            onClick={() => refetch()}
+            className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+          >
+            Try Again
+          </button>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
@@ -182,7 +150,7 @@ export default function LeavesPage() {
 
       {/* Leaves Table */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-        {loading ? (
+        {isLoading ? (
           <div className="p-8 text-center text-gray-500">Loading...</div>
         ) : leaves.length === 0 ? (
           <div className="p-8 text-center text-gray-500">No leave applications found</div>
@@ -275,14 +243,14 @@ export default function LeavesPage() {
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => setPagination({ ...pagination, page: pagination.page - 1 })}
+                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                     disabled={pagination.page === 1}
                     className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Previous
                   </button>
                   <button
-                    onClick={() => setPagination({ ...pagination, page: pagination.page + 1 })}
+                    onClick={() => setCurrentPage((prev) => Math.min(pagination.pages, prev + 1))}
                     disabled={pagination.page === pagination.pages}
                     className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >

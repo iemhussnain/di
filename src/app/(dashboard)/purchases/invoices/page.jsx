@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { usePurchaseInvoices } from '@/hooks/usePurchaseInvoices'
 
 export default function PurchaseInvoicesPage() {
   const router = useRouter()
-  const [invoices, setInvoices] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
   const [filters, setFilters] = useState({
     status: '',
     payment_status: '',
@@ -15,41 +15,22 @@ export default function PurchaseInvoicesPage() {
     to_date: '',
     overdue: false,
   })
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 20,
-    total: 0,
-    pages: 0,
-  })
 
-  useEffect(() => {
-    fetchInvoices()
-  }, [filters, pagination.page])
+  // React Query hooks
+  const { data, isLoading, error, refetch } = usePurchaseInvoices(
+    {
+      status: filters.status || undefined,
+      payment_status: filters.payment_status || undefined,
+      from_date: filters.from_date || undefined,
+      to_date: filters.to_date || undefined,
+      overdue: filters.overdue ? 'true' : undefined,
+    },
+    { page: currentPage, limit: 20 }
+  )
 
-  const fetchInvoices = async () => {
-    try {
-      setLoading(true)
-      const params = new URLSearchParams({
-        page: pagination.page.toString(),
-        limit: pagination.limit.toString(),
-        ...Object.fromEntries(
-          Object.entries(filters).filter(([_, v]) => v)
-        ),
-      })
-
-      const res = await fetch(`/api/purchase-invoices?${params}`)
-      const data = await res.json()
-
-      if (data.success) {
-        setInvoices(data.data)
-        setPagination(prev => ({ ...prev, ...data.pagination }))
-      }
-    } catch (error) {
-      console.error('Error fetching purchase invoices:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  // Extract data
+  const invoices = data?.data || []
+  const pagination = data?.pagination || { page: 1, limit: 20, total: 0, pages: 0 }
 
   const getStatusBadge = (status) => {
     const colors = {
@@ -169,9 +150,22 @@ export default function PurchaseInvoicesPage() {
         </div>
       </div>
 
+      {/* Error Alert */}
+      {error && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+          <p className="text-red-800 dark:text-red-200">Failed to load invoices: {error.message}</p>
+          <button
+            onClick={() => refetch()}
+            className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+          >
+            Try Again
+          </button>
+        </div>
+      )}
+
       {/* Invoices Table */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-        {loading ? (
+        {isLoading ? (
           <div className="p-8 text-center text-gray-500">Loading...</div>
         ) : invoices.length === 0 ? (
           <div className="p-8 text-center text-gray-500">No invoices found</div>
@@ -272,14 +266,14 @@ export default function PurchaseInvoicesPage() {
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => setPagination({ ...pagination, page: pagination.page - 1 })}
+                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                     disabled={pagination.page === 1}
                     className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Previous
                   </button>
                   <button
-                    onClick={() => setPagination({ ...pagination, page: pagination.page + 1 })}
+                    onClick={() => setCurrentPage((prev) => Math.min(pagination.pages, prev + 1))}
                     disabled={pagination.page === pagination.pages}
                     className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >

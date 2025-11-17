@@ -1,75 +1,46 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { usePayrolls, useProcessPayroll } from '@/hooks/usePayroll'
 
 export default function PayrollPage() {
   const router = useRouter()
-  const [payrolls, setPayrolls] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
   const [filters, setFilters] = useState({
     status: '',
     month: new Date().getMonth() + 1,
     year: new Date().getFullYear(),
   })
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 50,
-    total: 0,
-    pages: 0,
-  })
 
-  useEffect(() => {
-    fetchPayrolls()
-  }, [filters, pagination.page])
+  // React Query hooks
+  const { data, isLoading, error, refetch } = usePayrolls(
+    {
+      status: filters.status || undefined,
+      month: filters.month,
+      year: filters.year,
+    },
+    { page: currentPage, limit: 50 }
+  )
 
-  const fetchPayrolls = async () => {
-    try {
-      setLoading(true)
-      const params = new URLSearchParams({
-        page: pagination.page.toString(),
-        limit: pagination.limit.toString(),
-        ...Object.fromEntries(
-          Object.entries(filters).filter(([_, v]) => v)
-        ),
-      })
+  const processPayroll = useProcessPayroll()
 
-      const res = await fetch(`/api/payroll?${params}`)
-      const data = await res.json()
-
-      if (data.success) {
-        setPayrolls(data.data)
-        setPagination(prev => ({ ...prev, ...data.pagination }))
-      }
-    } catch (error) {
-      console.error('Error fetching payroll:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  // Extract data
+  const payrolls = data?.data || []
+  const pagination = data?.pagination || { page: 1, limit: 50, total: 0, pages: 0 }
 
   const handleProcess = async (id) => {
     if (!confirm('Process this payroll? This will finalize all calculations.')) return
 
-    try {
-      const res = await fetch(`/api/payroll/${id}/process`, { method: 'POST' })
-      const data = await res.json()
-      if (data.success) {
-        alert('Payroll processed successfully')
-        fetchPayrolls()
-      } else {
-        alert(data.error)
-      }
-    } catch (error) {
-      alert('Failed to process payroll')
-    }
+    processPayroll.mutate(id)
   }
 
   const handleMarkPaid = async (id) => {
     const paymentMode = prompt('Enter payment mode (Bank Transfer/Cash/Cheque):')
     if (!paymentMode) return
 
+    // Note: This needs a dedicated hook - using fetch for now
     try {
       const res = await fetch(`/api/payroll/${id}/pay`, {
         method: 'POST',
@@ -79,7 +50,7 @@ export default function PayrollPage() {
       const data = await res.json()
       if (data.success) {
         alert('Payroll marked as paid')
-        fetchPayrolls()
+        refetch()
       } else {
         alert(data.error)
       }
@@ -135,6 +106,19 @@ export default function PayrollPage() {
           Generate Payroll
         </Link>
       </div>
+
+      {/* Error Alert */}
+      {error && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+          <p className="text-red-800 dark:text-red-200">Failed to load payroll: {error.message}</p>
+          <button
+            onClick={() => refetch()}
+            className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+          >
+            Try Again
+          </button>
+        </div>
+      )}
 
       {/* Filters & Summary */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -219,7 +203,7 @@ export default function PayrollPage() {
 
       {/* Payroll Table */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-        {loading ? (
+        {isLoading ? (
           <div className="p-8 text-center text-gray-500">Loading...</div>
         ) : payrolls.length === 0 ? (
           <div className="p-8 text-center text-gray-500">
