@@ -1,55 +1,47 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { PageTransition, SlideIn, FadeIn, StaggerContainer, StaggerTableRow } from '@/components/animations'
 import { TableSkeleton } from '@/components/animations/SkeletonLoader'
+import { useInvoices, useDeleteInvoice } from '@/hooks/useInvoices'
 
 export default function RegisteredSalesInvoicesPage() {
   const router = useRouter()
-  const [invoices, setInvoices] = useState([])
-  const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState({
     status: '',
     payment_status: '',
     from_date: '',
     to_date: '',
+    is_registered: 'true', // Only registered invoices
   })
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 20,
-    total: 0,
-    pages: 0,
   })
 
-  useEffect(() => {
-    fetchInvoices()
-  }, [filters, pagination.page])
+  // Use React Query hook for data fetching
+  const { data, isLoading, error, refetch } = useInvoices(filters, pagination)
+  const deleteInvoice = useDeleteInvoice()
 
-  const fetchInvoices = async () => {
+  // Extract data from React Query response
+  const invoices = data?.invoices || data?.data || []
+  const paginationData = data?.pagination || {
+    page: pagination.page,
+    limit: pagination.limit,
+    total: 0,
+    pages: 0,
+  }
+
+  const handleDelete = async (id) => {
+    if (!confirm('Are you sure you want to delete this invoice?')) return
+
     try {
-      setLoading(true)
-      const params = new URLSearchParams({
-        page: pagination.page.toString(),
-        limit: pagination.limit.toString(),
-        is_registered: 'true', // Only registered invoices
-        ...Object.fromEntries(
-          Object.entries(filters).filter(([_, v]) => v)
-        ),
-      })
-
-      const res = await fetch(`/api/sales-invoices?${params}`)
-      const data = await res.json()
-
-      if (data.success) {
-        setInvoices(data.data)
-        setPagination(prev => ({ ...prev, ...data.pagination }))
-      }
+      await deleteInvoice.mutateAsync(id)
+      refetch()
     } catch (error) {
-      console.error('Error fetching registered invoices:', error)
-    } finally {
-      setLoading(false)
+      console.error('Failed to delete invoice:', error)
     }
   }
 
@@ -173,8 +165,24 @@ export default function RegisteredSalesInvoicesPage() {
       {/* Invoices Table */}
       <FadeIn delay={0.2}>
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border border-gray-100 dark:border-gray-700 overflow-hidden">
-          {loading ? (
+          {isLoading ? (
             <TableSkeleton rows={5} columns={9} />
+          ) : error ? (
+            <div className="p-16 text-center">
+              <div className="max-w-md mx-auto space-y-4">
+                <svg className="w-16 h-16 mx-auto text-red-300 dark:text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-lg font-medium text-gray-900 dark:text-gray-100">Failed to load invoices</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{error?.message || 'An error occurred'}</p>
+                <button
+                  onClick={() => refetch()}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-500/30 hover:shadow-xl transition-all"
+                >
+                  Try Again
+                </button>
+              </div>
+            </div>
           ) : invoices.length === 0 ? (
           <div className="p-16 text-center">
             <div className="max-w-md mx-auto space-y-4">
@@ -293,23 +301,23 @@ export default function RegisteredSalesInvoicesPage() {
             </div>
 
             {/* Pagination */}
-            {pagination.pages > 1 && (
+            {paginationData.pages > 1 && (
               <div className="px-6 py-5 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50">
                 <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  <span className="text-gray-900 dark:text-white font-semibold">Page {pagination.page}</span> of {pagination.pages}
-                  <span className="text-gray-500 dark:text-gray-400 ml-2">({pagination.total} total invoices)</span>
+                  <span className="text-gray-900 dark:text-white font-semibold">Page {paginationData.page}</span> of {paginationData.pages}
+                  <span className="text-gray-500 dark:text-gray-400 ml-2">({paginationData.total} total invoices)</span>
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => setPagination({ ...pagination, page: pagination.page - 1 })}
-                    disabled={pagination.page === 1}
+                    onClick={() => setPagination({ ...pagination, page: paginationData.page - 1 })}
+                    disabled={paginationData.page === 1}
                     className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-white dark:hover:bg-gray-800 hover:border-gray-400 dark:hover:border-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   >
                     Previous
                   </button>
                   <button
-                    onClick={() => setPagination({ ...pagination, page: pagination.page + 1 })}
-                    disabled={pagination.page === pagination.pages}
+                    onClick={() => setPagination({ ...pagination, page: paginationData.page + 1 })}
+                    disabled={paginationData.page === paginationData.pages}
                     className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-white dark:hover:bg-gray-800 hover:border-gray-400 dark:hover:border-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   >
                     Next

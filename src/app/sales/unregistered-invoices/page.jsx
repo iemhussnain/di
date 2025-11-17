@@ -1,82 +1,47 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { PageTransition, SlideIn, FadeIn, StaggerContainer, StaggerTableRow } from '@/components/animations'
 import { TableSkeleton } from '@/components/animations/SkeletonLoader'
+import { useInvoices, useDeleteInvoice } from '@/hooks/useInvoices'
 
 export default function UnregisteredInvoicesPage() {
   const router = useRouter()
-  const [invoices, setInvoices] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
   const [filters, setFilters] = useState({
-    search: '',
     status: '',
     payment_status: '',
     from_date: '',
-    to_date: ''
+    to_date: '',
+    is_registered: 'false', // Only unregistered invoices
   })
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 20,
-    total: 0,
-    totalPages: 0
   })
 
-  const fetchInvoices = async () => {
-    try {
-      setLoading(true)
-      const params = new URLSearchParams({
-        page: pagination.page.toString(),
-        limit: pagination.limit.toString(),
-        is_registered: 'false', // Only unregistered invoices
-        ...Object.fromEntries(
-          Object.entries(filters).filter(([_, v]) => v)
-        )
-      })
+  // Use React Query hook for data fetching
+  const { data, isLoading, error, refetch } = useInvoices(filters, pagination)
+  const deleteInvoice = useDeleteInvoice()
 
-      const res = await fetch(`/api/sales-invoices?${params}`)
-      if (!res.ok) throw new Error('Failed to fetch invoices')
-
-      const data = await res.json()
-      setInvoices(data.invoices)
-      setPagination(prev => ({
-        ...prev,
-        total: data.pagination.total,
-        totalPages: data.pagination.totalPages
-      }))
-      setError(null)
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchInvoices()
-  }, [pagination.page, filters])
-
-  const handleFilterChange = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value }))
-    setPagination(prev => ({ ...prev, page: 1 })) // Reset to page 1
+  // Extract data from React Query response
+  const invoices = data?.invoices || data?.data || []
+  const paginationData = data?.pagination || {
+    page: pagination.page,
+    limit: pagination.limit,
+    total: 0,
+    pages: 0,
   }
 
   const handleDelete = async (id) => {
     if (!confirm('Are you sure you want to delete this invoice?')) return
 
     try {
-      const res = await fetch(`/api/sales-invoices/${id}`, {
-        method: 'DELETE'
-      })
-
-      if (!res.ok) throw new Error('Failed to delete invoice')
-
-      fetchInvoices()
-    } catch (err) {
-      alert(err.message)
+      await deleteInvoice.mutateAsync(id)
+      refetch()
+    } catch (error) {
+      console.error('Failed to delete invoice:', error)
     }
   }
 
@@ -146,7 +111,7 @@ export default function UnregisteredInvoicesPage() {
             </label>
             <select
               value={filters.status}
-              onChange={(e) => handleFilterChange('status', e.target.value)}
+              onChange={(e) => setFilters({ ...filters, status: e.target.value })}
               className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-all"
             >
               <option value="">All Statuses</option>
@@ -161,7 +126,7 @@ export default function UnregisteredInvoicesPage() {
             </label>
             <select
               value={filters.payment_status}
-              onChange={(e) => handleFilterChange('payment_status', e.target.value)}
+              onChange={(e) => setFilters({ ...filters, payment_status: e.target.value })}
               className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-all"
             >
               <option value="">All Payment Statuses</option>
@@ -178,7 +143,7 @@ export default function UnregisteredInvoicesPage() {
             <input
               type="date"
               value={filters.from_date}
-              onChange={(e) => handleFilterChange('from_date', e.target.value)}
+              onChange={(e) => setFilters({ ...filters, from_date: e.target.value })}
               className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-all"
             />
           </div>
@@ -189,7 +154,7 @@ export default function UnregisteredInvoicesPage() {
             <input
               type="date"
               value={filters.to_date}
-              onChange={(e) => handleFilterChange('to_date', e.target.value)}
+              onChange={(e) => setFilters({ ...filters, to_date: e.target.value })}
               className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-all"
             />
           </div>
@@ -197,23 +162,27 @@ export default function UnregisteredInvoicesPage() {
         </div>
       </FadeIn>
 
-      {/* Error State */}
-      {error && (
-        <FadeIn delay={0.15}>
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 flex items-center gap-3">
-            <svg className="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span className="text-red-700 dark:text-red-400 font-medium">{error}</span>
-          </div>
-        </FadeIn>
-      )}
-
       {/* Invoices Table */}
       <FadeIn delay={0.2}>
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border border-gray-100 dark:border-gray-700 overflow-hidden">
-          {loading ? (
+          {isLoading ? (
             <TableSkeleton rows={5} columns={7} />
+          ) : error ? (
+            <div className="p-16 text-center">
+              <div className="max-w-md mx-auto space-y-4">
+                <svg className="w-16 h-16 mx-auto text-red-300 dark:text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-lg font-medium text-gray-900 dark:text-gray-100">Failed to load invoices</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{error?.message || 'An error occurred'}</p>
+                <button
+                  onClick={() => refetch()}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-500/30 hover:shadow-xl transition-all"
+                >
+                  Try Again
+                </button>
+              </div>
+            </div>
           ) : invoices.length === 0 ? (
           <div className="p-16 text-center">
             <div className="max-w-md mx-auto space-y-4">
@@ -328,23 +297,23 @@ export default function UnregisteredInvoicesPage() {
             </div>
 
             {/* Pagination */}
-            {pagination.totalPages > 1 && (
+            {paginationData.pages > 1 && (
               <div className="px-6 py-5 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50">
                 <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  <span className="text-gray-900 dark:text-white font-semibold">Page {pagination.page}</span> of {pagination.totalPages}
-                  <span className="text-gray-500 dark:text-gray-400 ml-2">({pagination.total} total invoices)</span>
+                  <span className="text-gray-900 dark:text-white font-semibold">Page {paginationData.page}</span> of {paginationData.pages}
+                  <span className="text-gray-500 dark:text-gray-400 ml-2">({paginationData.total} total invoices)</span>
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => setPagination({ ...pagination, page: Math.max(1, pagination.page - 1) })}
-                    disabled={pagination.page === 1}
+                    onClick={() => setPagination({ ...pagination, page: paginationData.page - 1 })}
+                    disabled={paginationData.page === 1}
                     className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-white dark:hover:bg-gray-800 hover:border-gray-400 dark:hover:border-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   >
                     Previous
                   </button>
                   <button
-                    onClick={() => setPagination({ ...pagination, page: Math.min(pagination.totalPages, pagination.page + 1) })}
-                    disabled={pagination.page === pagination.totalPages}
+                    onClick={() => setPagination({ ...pagination, page: paginationData.page + 1 })}
+                    disabled={paginationData.page === paginationData.pages}
                     className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-white dark:hover:bg-gray-800 hover:border-gray-400 dark:hover:border-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   >
                     Next
