@@ -5,62 +5,39 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { Card, Button, Input, Badge, Select, Alert, Skeleton, Table } from '@/components/ui'
 import { Plus, Search, Filter, Eye, CheckCircle, XCircle, DollarSign } from 'lucide-react'
+import { usePayments, useDeletePayment } from '@/hooks/usePayments'
 
 export default function PaymentsPage() {
-  const [payments, setPayments] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [partyTypeFilter, setPartyTypeFilter] = useState('')
-
-  // Pagination
   const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [totalCount, setTotalCount] = useState(0)
 
   // Mock user ID
   const userId = '507f1f77bcf86cd799439011'
 
-  useEffect(() => {
-    fetchPayments()
-  }, [currentPage, searchTerm, typeFilter, statusFilter, partyTypeFilter])
+  // React Query hooks
+  const { data, isLoading, error, refetch } = usePayments(
+    {
+      search: searchTerm,
+      payment_type: typeFilter,
+      status: statusFilter,
+      party_type: partyTypeFilter,
+    },
+    { page: currentPage, limit: 20 }
+  )
 
-  const fetchPayments = async () => {
-    try {
-      setLoading(true)
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: '20',
-      })
+  const deletePayment = useDeletePayment()
 
-      if (searchTerm) params.append('search', searchTerm)
-      if (typeFilter) params.append('payment_type', typeFilter)
-      if (statusFilter) params.append('status', statusFilter)
-      if (partyTypeFilter) params.append('party_type', partyTypeFilter)
-
-      const response = await fetch(`/api/payments?${params}`)
-      const data = await response.json()
-
-      if (response.ok) {
-        setPayments(data.data || [])
-        setTotalPages(data.pagination?.totalPages || 1)
-        setTotalCount(data.pagination?.totalCount || 0)
-        setError(null)
-      } else {
-        throw new Error(data.error || 'Failed to fetch payments')
-      }
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }
+  // Extract data
+  const payments = data?.data || []
+  const totalPages = data?.pagination?.totalPages || 1
+  const totalCount = data?.pagination?.totalCount || 0
 
   const handlePost = async (paymentId) => {
     if (!confirm('Post this payment? This will create accounting entries.')) return
@@ -74,7 +51,7 @@ export default function PaymentsPage() {
 
       if (response.ok) {
         alert('Payment posted successfully!')
-        fetchPayments()
+        refetch()
       } else {
         const data = await response.json()
         alert(data.error || 'Failed to post payment')
@@ -97,7 +74,7 @@ export default function PaymentsPage() {
 
       if (response.ok) {
         alert('Payment cancelled successfully!')
-        fetchPayments()
+        refetch()
       } else {
         const data = await response.json()
         alert(data.error || 'Failed to cancel payment')
@@ -141,7 +118,7 @@ export default function PaymentsPage() {
     })
   }
 
-  if (loading && payments.length === 0) {
+  if (isLoading && payments.length === 0) {
     return (
       <div className="p-6 space-y-6">
         <Skeleton className="h-8 w-64" />
@@ -170,7 +147,10 @@ export default function PaymentsPage() {
 
       {error && (
         <Alert variant="destructive">
-          <p>{error}</p>
+          <p>Failed to load payments: {error.message}</p>
+          <Button className="mt-2" size="sm" onClick={() => refetch()}>
+            Try Again
+          </Button>
         </Alert>
       )}
 

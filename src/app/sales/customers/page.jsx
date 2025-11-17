@@ -5,7 +5,7 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
@@ -18,23 +18,17 @@ import {
   CardTitle,
   CardContent,
   Badge,
+  Alert,
 } from '@/components/ui'
 import DashboardLayout from '@/components/layout/dashboard-layout'
-import toast from 'react-hot-toast'
 import { Pencil, Trash2, Plus, Search, Users, FileText, AlertCircle } from 'lucide-react'
+import { useCustomers, useDeleteCustomer } from '@/hooks/useCustomers'
 
 const CUSTOMER_STATUS = ['Active', 'Inactive', 'Blocked']
 
 export default function CustomersPage() {
   const router = useRouter()
-  const [customers, setCustomers] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 50,
-    total: 0,
-    pages: 0,
-  })
+  const [currentPage, setCurrentPage] = useState(1)
 
   // Filters
   const [filters, setFilters] = useState({
@@ -45,39 +39,23 @@ export default function CustomersPage() {
     credit_exceeded: false,
   })
 
-  useEffect(() => {
-    fetchCustomers()
-  }, [pagination.page, filters])
+  // React Query hooks
+  const { data, isLoading, error, refetch } = useCustomers(
+    {
+      search: filters.search,
+      status: filters.status,
+      is_registered: filters.is_registered,
+      outstanding: filters.outstanding ? 'true' : undefined,
+      credit_exceeded: filters.credit_exceeded ? 'true' : undefined,
+    },
+    { page: currentPage, limit: 50 }
+  )
 
-  const fetchCustomers = async () => {
-    setLoading(true)
-    try {
-      const queryParams = new URLSearchParams({
-        page: pagination.page.toString(),
-        limit: pagination.limit.toString(),
-        ...(filters.search && { search: filters.search }),
-        ...(filters.status && { status: filters.status }),
-        ...(filters.is_registered && { is_registered: filters.is_registered }),
-        ...(filters.outstanding && { outstanding: 'true' }),
-        ...(filters.credit_exceeded && { credit_exceeded: 'true' }),
-      })
+  const deleteCustomer = useDeleteCustomer()
 
-      const response = await fetch(`/api/customers?${queryParams}`)
-      const data = await response.json()
-
-      if (data.success) {
-        setCustomers(data.data || [])
-        setPagination(data.pagination)
-      } else {
-        toast.error(data.error || 'Failed to fetch customers')
-      }
-    } catch (error) {
-      console.error('Error fetching customers:', error)
-      toast.error('An error occurred while fetching customers')
-    } finally {
-      setLoading(false)
-    }
-  }
+  // Extract data
+  const customers = data?.data || []
+  const pagination = data?.pagination || { page: 1, limit: 50, total: 0, pages: 0 }
 
   const handleFilterChange = (e) => {
     const { name, value, type, checked } = e.target
@@ -85,12 +63,12 @@ export default function CustomersPage() {
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }))
-    setPagination((prev) => ({ ...prev, page: 1 })) // Reset to first page
+    setCurrentPage(1) // Reset to first page
   }
 
   const handleSearch = (e) => {
     e.preventDefault()
-    fetchCustomers()
+    // React Query will auto-refetch when filters change
   }
 
   const handleDelete = async (customerId, customerName) => {
@@ -98,23 +76,7 @@ export default function CustomersPage() {
       return
     }
 
-    try {
-      const response = await fetch(`/api/customers/${customerId}`, {
-        method: 'DELETE',
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        toast.success(data.message || 'Customer deleted successfully')
-        fetchCustomers()
-      } else {
-        toast.error(data.error || 'Failed to delete customer')
-      }
-    } catch (error) {
-      console.error('Error deleting customer:', error)
-      toast.error('An error occurred while deleting customer')
-    }
+    deleteCustomer.mutate(customerId)
   }
 
   const getStatusBadge = (status) => {
@@ -151,6 +113,16 @@ export default function CustomersPage() {
             </Button>
           </Link>
         </div>
+
+        {/* Error Alert */}
+        {error && (
+          <Alert variant="destructive">
+            <p>Failed to load customers: {error.message}</p>
+            <Button className="mt-2" size="sm" onClick={() => refetch()}>
+              Try Again
+            </Button>
+          </Alert>
+        )}
 
         {/* Filters */}
         <Card>
@@ -236,11 +208,11 @@ export default function CustomersPage() {
           <CardHeader>
             <CardTitle>
               Customers ({pagination.total})
-              {loading && <span className="text-sm font-normal ml-2">Loading...</span>}
+              {isLoading && <span className="text-sm font-normal ml-2">Loading...</span>}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {customers.length === 0 && !loading ? (
+            {customers.length === 0 && !isLoading ? (
               <div className="text-center py-12">
                 <Users className="h-12 w-12 mx-auto text-gray-400 dark:text-gray-600 mb-4" />
                 <p className="text-gray-500 dark:text-gray-400">No customers found</p>
@@ -369,7 +341,7 @@ export default function CustomersPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setPagination((prev) => ({ ...prev, page: prev.page - 1 }))}
+                        onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                         disabled={pagination.page === 1}
                       >
                         Previous
@@ -377,7 +349,7 @@ export default function CustomersPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setPagination((prev) => ({ ...prev, page: prev.page + 1 }))}
+                        onClick={() => setCurrentPage((prev) => Math.min(pagination.pages, prev + 1))}
                         disabled={pagination.page === pagination.pages}
                       >
                         Next

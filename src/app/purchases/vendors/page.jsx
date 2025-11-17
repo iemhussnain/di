@@ -1,61 +1,37 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { Card, Button, Input, Badge, Alert, Skeleton, Table } from '@/components/ui'
 import { Plus, Search, Filter, Edit, Eye, Trash2 } from 'lucide-react'
+import { useVendors, useDeleteVendor } from '@/hooks/useVendors'
 
 export default function VendorsPage() {
-  const [vendors, setVendors] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [currentPage, setCurrentPage] = useState(1)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [registrationFilter, setRegistrationFilter] = useState('all')
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 10,
-    total: 0,
-    pages: 0,
-  })
 
-  useEffect(() => {
-    fetchVendors()
-  }, [pagination.page, statusFilter, registrationFilter])
+  // React Query hooks
+  const { data, isLoading, error, refetch } = useVendors(
+    {
+      search: searchTerm || undefined,
+      status: statusFilter !== 'all' ? statusFilter : undefined,
+      is_registered: registrationFilter !== 'all' ? registrationFilter : undefined,
+    },
+    { page: currentPage, limit: 10 }
+  )
 
-  const fetchVendors = async () => {
-    try {
-      setLoading(true)
-      setError(null)
+  const deleteVendor = useDeleteVendor()
 
-      const params = new URLSearchParams({
-        page: pagination.page.toString(),
-        limit: pagination.limit.toString(),
-        ...(searchTerm && { search: searchTerm }),
-        ...(statusFilter !== 'all' && { status: statusFilter }),
-        ...(registrationFilter !== 'all' && { is_registered: registrationFilter }),
-      })
-
-      const response = await fetch(`/api/vendors?${params}`)
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch vendors')
-      }
-
-      setVendors(data.data)
-      setPagination(data.pagination)
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }
+  // Extract data
+  const vendors = data?.data || []
+  const pagination = data?.pagination || { page: 1, limit: 10, total: 0, pages: 0 }
 
   const handleSearch = (e) => {
     e.preventDefault()
-    setPagination((prev) => ({ ...prev, page: 1 }))
-    fetchVendors()
+    setCurrentPage(1)
+    // React Query will auto-refetch when searchTerm changes
   }
 
   const handleDelete = async (id) => {
@@ -63,22 +39,7 @@ export default function VendorsPage() {
       return
     }
 
-    try {
-      const response = await fetch(`/api/vendors/${id}`, {
-        method: 'DELETE',
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to delete vendor')
-      }
-
-      // Refresh vendors list
-      fetchVendors()
-    } catch (err) {
-      alert(`Error: ${err.message}`)
-    }
+    deleteVendor.mutate(id)
   }
 
   const formatCurrency = (amount) => {
@@ -147,7 +108,7 @@ export default function VendorsPage() {
                 value={statusFilter}
                 onChange={(e) => {
                   setStatusFilter(e.target.value)
-                  setPagination((prev) => ({ ...prev, page: 1 }))
+                  setCurrentPage(1)
                 }}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-900"
               >
@@ -163,7 +124,7 @@ export default function VendorsPage() {
                 value={registrationFilter}
                 onChange={(e) => {
                   setRegistrationFilter(e.target.value)
-                  setPagination((prev) => ({ ...prev, page: 1 }))
+                  setCurrentPage(1)
                 }}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-900"
               >
@@ -179,7 +140,10 @@ export default function VendorsPage() {
       {/* Error Alert */}
       {error && (
         <Alert variant="destructive">
-          <p>{error}</p>
+          <p>Failed to load vendors: {error.message}</p>
+          <Button className="mt-2" size="sm" onClick={() => refetch()}>
+            Try Again
+          </Button>
         </Alert>
       )}
 
@@ -213,7 +177,7 @@ export default function VendorsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {loading ? (
+              {isLoading ? (
                 // Loading skeleton
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i}>
@@ -313,7 +277,7 @@ export default function VendorsPage() {
         </div>
 
         {/* Pagination */}
-        {!loading && vendors.length > 0 && (
+        {!isLoading && vendors.length > 0 && (
           <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between">
               <div className="text-sm text-gray-500 dark:text-gray-400">
@@ -325,7 +289,7 @@ export default function VendorsPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setPagination((prev) => ({ ...prev, page: prev.page - 1 }))}
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                   disabled={pagination.page === 1}
                 >
                   Previous
@@ -333,7 +297,7 @@ export default function VendorsPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setPagination((prev) => ({ ...prev, page: prev.page + 1 }))}
+                  onClick={() => setCurrentPage((prev) => Math.min(pagination.pages, prev + 1))}
                   disabled={pagination.page >= pagination.pages}
                 >
                   Next

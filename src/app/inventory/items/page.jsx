@@ -5,7 +5,7 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
@@ -17,22 +17,16 @@ import {
   CardHeader,
   CardTitle,
   CardContent,
+  Alert,
 } from '@/components/ui'
 import DashboardLayout from '@/components/layout/dashboard-layout'
-import toast from 'react-hot-toast'
 import { Pencil, Trash2, Plus, Search, Package, AlertTriangle } from 'lucide-react'
+import { useInventoryItems, useDeleteInventoryItem } from '@/hooks/useInventoryItems'
+import { useCategories } from '@/hooks/useCategories'
 
 export default function ItemsPage() {
   const router = useRouter()
-  const [items, setItems] = useState([])
-  const [categories, setCategories] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 50,
-    total: 0,
-    pages: 0,
-  })
+  const [currentPage, setCurrentPage] = useState(1)
 
   // Filters
   const [filters, setFilters] = useState({
@@ -42,55 +36,28 @@ export default function ItemsPage() {
     low_stock: false,
   })
 
-  useEffect(() => {
-    fetchCategories()
-  }, [])
+  // React Query hooks
+  const { data: categoriesData } = useCategories(
+    { is_active: 'true' },
+    { page: 1, limit: 1000 }
+  )
 
-  useEffect(() => {
-    fetchItems()
-  }, [pagination.page, filters])
+  const { data, isLoading, error, refetch } = useInventoryItems(
+    {
+      search: filters.search || undefined,
+      category_id: filters.category_id || undefined,
+      is_active: filters.is_active || undefined,
+      low_stock: filters.low_stock ? 'true' : undefined,
+    },
+    { page: currentPage, limit: 50 }
+  )
 
-  const fetchCategories = async () => {
-    try {
-      const response = await fetch('/api/categories?is_active=true&limit=1000')
-      const data = await response.json()
+  const deleteItem = useDeleteInventoryItem()
 
-      if (data.success) {
-        setCategories(data.data || [])
-      }
-    } catch (error) {
-      console.error('Error fetching categories:', error)
-    }
-  }
-
-  const fetchItems = async () => {
-    setLoading(true)
-    try {
-      const queryParams = new URLSearchParams({
-        page: pagination.page.toString(),
-        limit: pagination.limit.toString(),
-        ...(filters.search && { search: filters.search }),
-        ...(filters.category_id && { category_id: filters.category_id }),
-        ...(filters.is_active && { is_active: filters.is_active }),
-        ...(filters.low_stock && { low_stock: 'true' }),
-      })
-
-      const response = await fetch(`/api/items?${queryParams}`)
-      const data = await response.json()
-
-      if (data.success) {
-        setItems(data.data || [])
-        setPagination(data.pagination)
-      } else {
-        toast.error(data.error || 'Failed to fetch items')
-      }
-    } catch (error) {
-      console.error('Error fetching items:', error)
-      toast.error('An error occurred while fetching items')
-    } finally {
-      setLoading(false)
-    }
-  }
+  // Extract data
+  const items = data?.data || []
+  const categories = categoriesData?.data || []
+  const pagination = data?.pagination || { page: 1, limit: 50, total: 0, pages: 0 }
 
   const handleFilterChange = (e) => {
     const { name, value, type, checked } = e.target
@@ -98,12 +65,12 @@ export default function ItemsPage() {
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }))
-    setPagination((prev) => ({ ...prev, page: 1 })) // Reset to first page
+    setCurrentPage(1) // Reset to first page
   }
 
   const handleSearch = (e) => {
     e.preventDefault()
-    fetchItems()
+    // React Query will auto-refetch when filters change
   }
 
   const handleDelete = async (itemId, itemName) => {
@@ -111,23 +78,7 @@ export default function ItemsPage() {
       return
     }
 
-    try {
-      const response = await fetch(`/api/items/${itemId}`, {
-        method: 'DELETE',
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        toast.success(data.message || 'Item deleted successfully')
-        fetchItems()
-      } else {
-        toast.error(data.error || 'Failed to delete item')
-      }
-    } catch (error) {
-      console.error('Error deleting item:', error)
-      toast.error('An error occurred while deleting item')
-    }
+    deleteItem.mutate(itemId)
   }
 
   const calculateTotalQty = (item) => {
@@ -172,6 +123,16 @@ export default function ItemsPage() {
             </Link>
           </div>
         </div>
+
+        {/* Error Alert */}
+        {error && (
+          <Alert variant="destructive">
+            <p>Failed to load items: {error.message}</p>
+            <Button className="mt-2" size="sm" onClick={() => refetch()}>
+              Try Again
+            </Button>
+          </Alert>
+        )}
 
         {/* Filters */}
         <Card>
@@ -246,11 +207,11 @@ export default function ItemsPage() {
           <CardHeader>
             <CardTitle>
               Items ({pagination.total})
-              {loading && <span className="text-sm font-normal ml-2">Loading...</span>}
+              {isLoading && <span className="text-sm font-normal ml-2">Loading...</span>}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {items.length === 0 && !loading ? (
+            {items.length === 0 && !isLoading ? (
               <div className="text-center py-12">
                 <Package className="h-12 w-12 mx-auto text-gray-400 dark:text-gray-600 mb-4" />
                 <p className="text-gray-500 dark:text-gray-400">No items found</p>
@@ -382,7 +343,7 @@ export default function ItemsPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setPagination((prev) => ({ ...prev, page: prev.page - 1 }))}
+                        onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                         disabled={pagination.page === 1}
                       >
                         Previous
@@ -390,7 +351,7 @@ export default function ItemsPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setPagination((prev) => ({ ...prev, page: prev.page + 1 }))}
+                        onClick={() => setCurrentPage((prev) => Math.min(pagination.pages, prev + 1))}
                         disabled={pagination.page === pagination.pages}
                       >
                         Next

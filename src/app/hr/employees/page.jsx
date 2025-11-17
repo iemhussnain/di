@@ -1,61 +1,37 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { Card, Button, Input, Badge, Alert, Skeleton, Table } from '@/components/ui'
 import { Plus, Search, Edit, Eye, Trash2 } from 'lucide-react'
+import { useEmployees, useDeleteEmployee } from '@/hooks/useEmployees'
 
 export default function EmployeesPage() {
-  const [employees, setEmployees] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [currentPage, setCurrentPage] = useState(1)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [employmentTypeFilter, setEmploymentTypeFilter] = useState('all')
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 10,
-    total: 0,
-    pages: 0,
-  })
 
-  useEffect(() => {
-    fetchEmployees()
-  }, [pagination.page, statusFilter, employmentTypeFilter])
+  // React Query hooks
+  const { data, isLoading, error, refetch } = useEmployees(
+    {
+      search: searchTerm || undefined,
+      status: statusFilter !== 'all' ? statusFilter : undefined,
+      employment_type: employmentTypeFilter !== 'all' ? employmentTypeFilter : undefined,
+    },
+    { page: currentPage, limit: 10 }
+  )
 
-  const fetchEmployees = async () => {
-    try {
-      setLoading(true)
-      setError(null)
+  const deleteEmployee = useDeleteEmployee()
 
-      const params = new URLSearchParams({
-        page: pagination.page.toString(),
-        limit: pagination.limit.toString(),
-        ...(searchTerm && { search: searchTerm }),
-        ...(statusFilter !== 'all' && { status: statusFilter }),
-        ...(employmentTypeFilter !== 'all' && { employment_type: employmentTypeFilter }),
-      })
-
-      const response = await fetch(`/api/employees?${params}`)
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch employees')
-      }
-
-      setEmployees(data.data)
-      setPagination(data.pagination)
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }
+  // Extract data
+  const employees = data?.data || []
+  const pagination = data?.pagination || { page: 1, limit: 10, total: 0, pages: 0 }
 
   const handleSearch = (e) => {
     e.preventDefault()
-    setPagination((prev) => ({ ...prev, page: 1 }))
-    fetchEmployees()
+    setCurrentPage(1)
+    // React Query will auto-refetch when searchTerm changes
   }
 
   const handleDelete = async (id) => {
@@ -63,22 +39,7 @@ export default function EmployeesPage() {
       return
     }
 
-    try {
-      const response = await fetch(`/api/employees/${id}`, {
-        method: 'DELETE',
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to delete employee')
-      }
-
-      // Refresh employees list
-      fetchEmployees()
-    } catch (err) {
-      alert(`Error: ${err.message}`)
-    }
+    deleteEmployee.mutate(id)
   }
 
   const formatCurrency = (amount) => {
@@ -147,7 +108,7 @@ export default function EmployeesPage() {
                 value={statusFilter}
                 onChange={(e) => {
                   setStatusFilter(e.target.value)
-                  setPagination((prev) => ({ ...prev, page: 1 }))
+                  setCurrentPage(1)
                 }}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-900"
               >
@@ -163,7 +124,7 @@ export default function EmployeesPage() {
                 value={employmentTypeFilter}
                 onChange={(e) => {
                   setEmploymentTypeFilter(e.target.value)
-                  setPagination((prev) => ({ ...prev, page: 1 }))
+                  setCurrentPage(1)
                 }}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-900"
               >
@@ -180,7 +141,10 @@ export default function EmployeesPage() {
       {/* Error Alert */}
       {error && (
         <Alert variant="destructive">
-          <p>{error}</p>
+          <p>Failed to load employees: {error.message}</p>
+          <Button className="mt-2" size="sm" onClick={() => refetch()}>
+            Try Again
+          </Button>
         </Alert>
       )}
 
@@ -217,7 +181,7 @@ export default function EmployeesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {loading ? (
+              {isLoading ? (
                 // Loading skeleton
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i}>
@@ -312,7 +276,7 @@ export default function EmployeesPage() {
         </div>
 
         {/* Pagination */}
-        {!loading && employees.length > 0 && (
+        {!isLoading && employees.length > 0 && (
           <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between">
               <div className="text-sm text-gray-500 dark:text-gray-400">
@@ -324,7 +288,7 @@ export default function EmployeesPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setPagination((prev) => ({ ...prev, page: prev.page - 1 }))}
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                   disabled={pagination.page === 1}
                 >
                   Previous
@@ -332,7 +296,7 @@ export default function EmployeesPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setPagination((prev) => ({ ...prev, page: prev.page + 1 }))}
+                  onClick={() => setCurrentPage((prev) => Math.min(pagination.pages, prev + 1))}
                   disabled={pagination.page >= pagination.pages}
                 >
                   Next

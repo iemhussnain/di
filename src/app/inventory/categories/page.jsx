@@ -5,7 +5,7 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
@@ -17,21 +17,15 @@ import {
   CardHeader,
   CardTitle,
   CardContent,
+  Alert,
 } from '@/components/ui'
 import DashboardLayout from '@/components/layout/dashboard-layout'
-import toast from 'react-hot-toast'
 import { Pencil, Trash2, Plus, Search, FolderTree } from 'lucide-react'
+import { useCategories, useDeleteCategory } from '@/hooks/useCategories'
 
 export default function CategoriesPage() {
   const router = useRouter()
-  const [categories, setCategories] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 50,
-    total: 0,
-    pages: 0,
-  })
+  const [currentPage, setCurrentPage] = useState(1)
 
   // Filters
   const [filters, setFilters] = useState({
@@ -40,47 +34,31 @@ export default function CategoriesPage() {
     is_active: 'true',
   })
 
-  useEffect(() => {
-    fetchCategories()
-  }, [pagination.page, filters])
+  // React Query hooks
+  const { data, isLoading, error, refetch } = useCategories(
+    {
+      search: filters.search || undefined,
+      parent_id: filters.parent_id || undefined,
+      is_active: filters.is_active || undefined,
+    },
+    { page: currentPage, limit: 50 }
+  )
 
-  const fetchCategories = async () => {
-    setLoading(true)
-    try {
-      const queryParams = new URLSearchParams({
-        page: pagination.page.toString(),
-        limit: pagination.limit.toString(),
-        ...(filters.search && { search: filters.search }),
-        ...(filters.parent_id && { parent_id: filters.parent_id }),
-        ...(filters.is_active && { is_active: filters.is_active }),
-      })
+  const deleteCategory = useDeleteCategory()
 
-      const response = await fetch(`/api/categories?${queryParams}`)
-      const data = await response.json()
-
-      if (data.success) {
-        setCategories(data.data || [])
-        setPagination(data.pagination)
-      } else {
-        toast.error(data.error || 'Failed to fetch categories')
-      }
-    } catch (error) {
-      console.error('Error fetching categories:', error)
-      toast.error('An error occurred while fetching categories')
-    } finally {
-      setLoading(false)
-    }
-  }
+  // Extract data
+  const categories = data?.data || []
+  const pagination = data?.pagination || { page: 1, limit: 50, total: 0, pages: 0 }
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target
     setFilters((prev) => ({ ...prev, [name]: value }))
-    setPagination((prev) => ({ ...prev, page: 1 })) // Reset to first page
+    setCurrentPage(1) // Reset to first page
   }
 
   const handleSearch = (e) => {
     e.preventDefault()
-    fetchCategories()
+    // React Query will auto-refetch when filters change
   }
 
   const handleDelete = async (categoryId, categoryName) => {
@@ -88,23 +66,7 @@ export default function CategoriesPage() {
       return
     }
 
-    try {
-      const response = await fetch(`/api/categories/${categoryId}`, {
-        method: 'DELETE',
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        toast.success(data.message || 'Category deleted successfully')
-        fetchCategories()
-      } else {
-        toast.error(data.error || 'Failed to delete category')
-      }
-    } catch (error) {
-      console.error('Error deleting category:', error)
-      toast.error('An error occurred while deleting category')
-    }
+    deleteCategory.mutate(categoryId)
   }
 
   const getLevelBadge = (level) => {
@@ -135,6 +97,16 @@ export default function CategoriesPage() {
             </Button>
           </Link>
         </div>
+
+        {/* Error Alert */}
+        {error && (
+          <Alert variant="destructive">
+            <p>Failed to load categories: {error.message}</p>
+            <Button className="mt-2" size="sm" onClick={() => refetch()}>
+              Try Again
+            </Button>
+          </Alert>
+        )}
 
         {/* Filters */}
         <Card>
@@ -189,11 +161,11 @@ export default function CategoriesPage() {
           <CardHeader>
             <CardTitle>
               Categories ({pagination.total})
-              {loading && <span className="text-sm font-normal ml-2">Loading...</span>}
+              {isLoading && <span className="text-sm font-normal ml-2">Loading...</span>}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {categories.length === 0 && !loading ? (
+            {categories.length === 0 && !isLoading ? (
               <div className="text-center py-12">
                 <FolderTree className="h-12 w-12 mx-auto text-gray-400 dark:text-gray-600 mb-4" />
                 <p className="text-gray-500 dark:text-gray-400">No categories found</p>
@@ -279,7 +251,7 @@ export default function CategoriesPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setPagination((prev) => ({ ...prev, page: prev.page - 1 }))}
+                        onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                         disabled={pagination.page === 1}
                       >
                         Previous
@@ -287,7 +259,7 @@ export default function CategoriesPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setPagination((prev) => ({ ...prev, page: prev.page + 1 }))}
+                        onClick={() => setCurrentPage((prev) => Math.min(pagination.pages, prev + 1))}
                         disabled={pagination.page === pagination.pages}
                       >
                         Next
