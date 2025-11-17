@@ -7,13 +7,13 @@
     "report_type": "comprehensive_progress"
   },
   "summary": {
-    "total_tasks": 156,
-    "completed_tasks": 102,
-    "in_progress_tasks": 12,
-    "incomplete_tasks": 42,
-    "completion_percentage": 65.4,
-    "total_lines_of_code": 32000,
-    "total_files": 187
+    "total_tasks": 161,
+    "completed_tasks": 107,
+    "in_progress_tasks": 10,
+    "incomplete_tasks": 44,
+    "completion_percentage": 66.5,
+    "total_lines_of_code": 33500,
+    "total_files": 192
   },
   "module_completion": [
     {
@@ -60,17 +60,17 @@
     },
     {
       "module": "HR & Payroll",
-      "completion_percentage": 30,
-      "status": "minimal",
-      "tasks_total": 14,
-      "tasks_completed": 4
+      "completion_percentage": 55,
+      "status": "good_progress",
+      "tasks_total": 17,
+      "tasks_completed": 9
     },
     {
       "module": "Purchases",
-      "completion_percentage": 25,
-      "status": "minimal",
-      "tasks_total": 16,
-      "tasks_completed": 4
+      "completion_percentage": 40,
+      "status": "partial",
+      "tasks_total": 18,
+      "tasks_completed": 7
     },
     {
       "module": "Reports",
@@ -136,8 +136,8 @@
     "completion_percentage": 96.2
   },
   "database_models": {
-    "total": 18,
-    "complete": 18,
+    "total": 23,
+    "complete": 23,
     "partial": 0,
     "missing": 0,
     "completion_percentage": 100
@@ -255,14 +255,14 @@
     "with_4_developers": "3-4 weeks"
   },
   "code_metrics": {
-    "total_loc": 32000,
+    "total_loc": 33500,
     "frontend_loc": 22000,
     "backend_loc": 6000,
-    "models_loc": 2500,
+    "models_loc": 4000,
     "config_loc": 1500,
     "components_count": 85,
     "pages_count": 44,
     "api_routes_count": 52,
-    "models_count": 18
+    "models_count": 23
   }
 }
