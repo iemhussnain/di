@@ -54,6 +54,23 @@ export const postSalesInvoiceSchema = z.object({
 // Record Payment Schema
 export const recordPaymentSchema = z.object({
   amount: z.number().positive('Payment amount must be greater than 0'),
+  payment_method: z.enum([
+    'Cash',
+    'Bank Transfer',
+    'Cheque',
+    'Credit Card',
+    'Debit Card',
+    'Online Payment',
+  ], {
+    required_error: 'Payment method is required',
+  }),
+  account_id: z.string().min(1, 'Cash/Bank account is required'),
+  payment_date: z.string().refine((date) => !isNaN(Date.parse(date)), 'Invalid payment date').optional(),
+  bank_name: z.string().optional(),
+  cheque_no: z.string().optional(),
+  transaction_ref: z.string().optional(),
+  notes: z.string().optional(),
+  created_by: z.string().min(1, 'User ID is required'),
 })
 
 // Cancel Sales Invoice Schema

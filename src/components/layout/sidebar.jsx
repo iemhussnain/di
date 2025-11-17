@@ -34,9 +34,11 @@ const menuItems = [
     title: 'Sales',
     icon: ShoppingCart,
     subItems: [
+      { title: 'Orders', href: '/sales/orders' },
       { title: 'Invoices', href: '/sales/invoices' },
       { title: 'Customers', href: '/sales/customers' },
       { title: 'Payments', href: '/sales/payments' },
+      { title: 'Analytics', href: '/sales/analytics' },
       { title: 'Credit Notes', href: '/sales/credit-notes' },
     ],
   },
