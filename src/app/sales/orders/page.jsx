@@ -1,86 +1,48 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { Card, Button, Input, Badge, Alert, Skeleton, Table } from '@/components/ui'
 import { Plus, Search, Filter, Eye, Edit, Trash2, CheckCircle, XCircle, FileText } from 'lucide-react'
+import { useSalesOrders, useDeleteSalesOrder, useConvertOrderToInvoice } from '@/hooks/useSalesOrders'
+import { useCustomers } from '@/hooks/useCustomers'
+import { useRouter } from 'next/navigation'
 
 export default function SalesOrdersPage() {
-  const [orders, setOrders] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const router = useRouter()
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [customerFilter, setCustomerFilter] = useState('')
-  const [customers, setCustomers] = useState([])
-
-  // Pagination
   const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [totalCount, setTotalCount] = useState(0)
 
-  useEffect(() => {
-    fetchOrders()
-    fetchCustomers()
-  }, [currentPage, searchTerm, statusFilter, customerFilter])
+  // React Query hooks
+  const { data, isLoading, error, refetch } = useSalesOrders(
+    {
+      search: searchTerm,
+      status: statusFilter,
+      customer_id: customerFilter,
+    },
+    { page: currentPage, limit: 20 }
+  )
 
-  const fetchOrders = async () => {
-    try {
-      setLoading(true)
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: '20',
-      })
+  const { data: customersData } = useCustomers({ status: 'Active' }, { page: 1, limit: 1000 })
+  const deleteSalesOrder = useDeleteSalesOrder()
+  const convertToInvoice = useConvertOrderToInvoice()
 
-      if (searchTerm) params.append('search', searchTerm)
-      if (statusFilter) params.append('status', statusFilter)
-      if (customerFilter) params.append('customer_id', customerFilter)
-
-      const response = await fetch(`/api/sales-orders?${params}`)
-      const data = await response.json()
-
-      if (response.ok) {
-        setOrders(data.data || [])
-        setTotalPages(data.pagination?.totalPages || 1)
-        setTotalCount(data.pagination?.totalCount || 0)
-      } else {
-        throw new Error(data.error || 'Failed to fetch orders')
-      }
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const fetchCustomers = async () => {
-    try {
-      const response = await fetch('/api/customers?limit=1000&status=Active')
-      const data = await response.json()
-      if (response.ok) {
-        setCustomers(data.data || [])
-      }
-    } catch (error) {
-      console.error('Failed to fetch customers:', error)
-    }
-  }
+  // Extract data
+  const orders = data?.data || []
+  const totalPages = data?.pagination?.totalPages || 1
+  const totalCount = data?.pagination?.totalCount || 0
+  const customers = customersData?.data || []
 
   const handleDelete = async (id) => {
     if (!confirm('Are you sure you want to delete this sales order?')) return
 
     try {
-      const response = await fetch(`/api/sales-orders/${id}`, {
-        method: 'DELETE',
-      })
-
-      if (response.ok) {
-        fetchOrders()
-      } else {
-        const data = await response.json()
-        alert(data.error || 'Failed to delete order')
-      }
+      await deleteSalesOrder.mutateAsync(id)
+      refetch()
     } catch (error) {
-      alert('Failed to delete order')
+      console.error('Failed to delete order:', error)
     }
   }
 
@@ -88,6 +50,7 @@ export default function SalesOrdersPage() {
     if (!confirm('Are you sure you want to confirm this order? This will reduce inventory.')) return
 
     try {
+      // Note: Confirm functionality needs API endpoint - using direct API call for now
       const response = await fetch(`/api/sales-orders/${id}/confirm`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -96,7 +59,7 @@ export default function SalesOrdersPage() {
 
       if (response.ok) {
         alert('Order confirmed successfully!')
-        fetchOrders()
+        refetch()
       } else {
         const data = await response.json()
         alert(data.error || 'Failed to confirm order')
@@ -110,22 +73,12 @@ export default function SalesOrdersPage() {
     if (!confirm('Create invoice from this order?')) return
 
     try {
-      const response = await fetch(`/api/sales-orders/${id}/create-invoice`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ created_by: '507f1f77bcf86cd799439011' }),
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        alert('Invoice created successfully!')
-        window.location.href = `/sales/invoices/${data.data._id}`
-      } else {
-        const data = await response.json()
-        alert(data.error || 'Failed to create invoice')
+      const result = await convertToInvoice.mutateAsync(id)
+      if (result?.data?._id) {
+        router.push(`/sales/invoices/${result.data._id}`)
       }
     } catch (error) {
-      alert('Failed to create invoice')
+      console.error('Failed to create invoice:', error)
     }
   }
 
@@ -243,11 +196,18 @@ export default function SalesOrdersPage() {
       {/* Orders Table */}
       <Card>
         <div className="overflow-x-auto">
-          {loading ? (
+          {isLoading ? (
             <div className="p-6 space-y-4">
               <Skeleton className="h-8 w-full" />
               <Skeleton className="h-8 w-full" />
               <Skeleton className="h-8 w-full" />
+            </div>
+          ) : error ? (
+            <div className="p-12 text-center text-red-500">
+              <p>Failed to load orders: {error.message}</p>
+              <Button className="mt-4" onClick={() => refetch()}>
+                Try Again
+              </Button>
             </div>
           ) : orders.length === 0 ? (
             <div className="p-12 text-center text-gray-500">
