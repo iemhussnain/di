@@ -53,7 +53,7 @@ export async function GET(request) {
     }
 
     // Call FBR STATL API to check registration status
-    const statl Result = await FBRService.checkSTATL(user.fbr_sandbox_token, ntn)
+    const statlResult = await FBRService.checkSTATL(user.fbr_sandbox_token, ntn)
 
     // Extract status and province from response
     const status = statlResult.status || statlResult.registrationStatus || 'Not Registered'

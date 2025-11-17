@@ -39,17 +39,13 @@ const menuItems = [
       { title: 'Customers', href: '/sales/customers' },
       { title: 'Payments', href: '/sales/payments' },
       { title: 'Analytics', href: '/sales/analytics' },
-      { title: 'Credit Notes', href: '/sales/credit-notes' },
     ],
   },
   {
     title: 'Purchases',
     icon: ShoppingBag,
     subItems: [
-      { title: 'Purchase Orders', href: '/purchases/orders' },
       { title: 'Vendors', href: '/purchases/vendors' },
-      { title: 'Payments', href: '/purchases/payments' },
-      { title: 'Debit Notes', href: '/purchases/debit-notes' },
     ],
   },
   {
@@ -57,9 +53,8 @@ const menuItems = [
     icon: Package,
     subItems: [
       { title: 'Items', href: '/inventory/items' },
-      { title: 'Stock Movement', href: '/inventory/movements' },
-      { title: 'Stock Adjustment', href: '/inventory/adjustments' },
-      { title: 'Stock Reports', href: '/inventory/reports' },
+      { title: 'Categories', href: '/inventory/categories' },
+      { title: 'Low Stock', href: '/inventory/items/low-stock' },
     ],
   },
   {
@@ -70,7 +65,8 @@ const menuItems = [
       { title: 'Journal Entries', href: '/accounting/journal' },
       { title: 'Ledger', href: '/accounting/ledger' },
       { title: 'Trial Balance', href: '/accounting/trial-balance' },
-      { title: 'Financial Statements', href: '/accounting/statements' },
+      { title: 'Balance Sheet', href: '/accounting/balance-sheet' },
+      { title: 'Profit & Loss', href: '/accounting/profit-loss' },
     ],
   },
   {
@@ -78,28 +74,13 @@ const menuItems = [
     icon: Users,
     subItems: [
       { title: 'Employees', href: '/hr/employees' },
-      { title: 'Attendance', href: '/hr/attendance' },
-      { title: 'Payroll', href: '/hr/payroll' },
-      { title: 'Leaves', href: '/hr/leaves' },
     ],
   },
   {
     title: 'FBR Compliance',
     icon: Building2,
     subItems: [
-      { title: 'FBR Invoices', href: '/fbr/invoices' },
-      { title: 'Tax Returns', href: '/fbr/returns' },
-      { title: 'Reports', href: '/fbr/reports' },
-    ],
-  },
-  {
-    title: 'Reports',
-    icon: FileText,
-    subItems: [
-      { title: 'Sales Reports', href: '/reports/sales' },
-      { title: 'Purchase Reports', href: '/reports/purchases' },
-      { title: 'Inventory Reports', href: '/reports/inventory' },
-      { title: 'Financial Reports', href: '/reports/financial' },
+      { title: 'Testing', href: '/fbr/testing' },
     ],
   },
   {

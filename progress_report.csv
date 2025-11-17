@@ -1,0 +1,94 @@
+Category,Task,Status,Completion_Date,Author,Priority,Lines_Of_Code,Estimated_Effort_Hours
+Frontend,Dashboard Page,Complete,2025-11-16,Claude,High,180,0
+Frontend,Login Page,Complete,2025-11-17,Claude,Critical,150,0
+Frontend,Register Page,Complete,2025-11-17,Claude,Critical,276,0
+Frontend,Accounting - Chart of Accounts,Complete,2025-11-16,Claude,High,800,0
+Frontend,Accounting - Journal Entries,Complete,2025-11-17,Claude,High,1200,0
+Frontend,Accounting - Ledger,Complete,2025-11-17,Claude,High,600,0
+Frontend,Accounting - Trial Balance,Complete,2025-11-17,Claude,High,400,0
+Frontend,Accounting - Balance Sheet,Complete,2025-11-17,Claude,High,500,0
+Frontend,Accounting - Profit & Loss,Complete,2025-11-17,Claude,High,500,0
+Frontend,Sales - Orders,Complete,2025-11-17,Claude,High,1400,0
+Frontend,Sales - Invoices,Complete,2025-11-17,Claude,High,1200,0
+Frontend,Sales - Customers,Complete,2025-11-16,Claude,High,1100,0
+Frontend,Sales - Payments,Complete,2025-11-17,Claude,High,800,0
+Frontend,Sales - Analytics,Complete,2025-11-17,Claude,Medium,600,0
+Frontend,Inventory - Items,Complete,2025-11-16,Claude,High,1000,0
+Frontend,Inventory - Categories,Complete,2025-11-16,Claude,Medium,700,0
+Frontend,Inventory - Low Stock,Complete,2025-11-16,Claude,Medium,350,0
+Frontend,HR - Employees,Complete,2025-11-16,Claude,High,900,0
+Frontend,Vendors Management,Complete,2025-11-16,Claude,High,800,0
+Frontend,FBR Testing Page,Complete,2025-11-17,Claude,Medium,490,0
+Frontend,Settings Page,Complete,2025-11-17,Claude,Medium,520,0
+Frontend,Purchase Orders,Incomplete,N/A,Unassigned,Critical,0,16
+Frontend,Purchase Invoices,Incomplete,N/A,Unassigned,Critical,0,12
+Frontend,Payroll Pages,Incomplete,N/A,Unassigned,Critical,0,12
+Frontend,Attendance Pages,Incomplete,N/A,Unassigned,High,0,10
+Frontend,Leave Management,Incomplete,N/A,Unassigned,High,0,8
+Frontend,Reports Module,Incomplete,N/A,Unassigned,High,0,24
+Backend,User Model & Auth,Complete,2025-11-17,Claude,Critical,175,0
+Backend,Chart of Accounts API,Complete,2025-11-16,Claude,High,300,0
+Backend,Journal Entry API,Complete,2025-11-17,Claude,High,450,0
+Backend,Ledger API,Complete,2025-11-17,Claude,High,250,0
+Backend,Financial Statements API,Complete,2025-11-17,Claude,High,400,0
+Backend,Customer API,Complete,2025-11-16,Claude,High,350,0
+Backend,Vendor API,Complete,2025-11-16,Claude,High,300,0
+Backend,Employee API,Complete,2025-11-16,Claude,High,280,0
+Backend,Item/Inventory API,Complete,2025-11-16,Claude,High,400,0
+Backend,Category API,Complete,2025-11-16,Claude,Medium,250,0
+Backend,Sales Order API,Complete,2025-11-17,Claude,High,600,0
+Backend,Sales Invoice API,Complete,2025-11-17,Claude,High,550,0
+Backend,Payment API,Complete,2025-11-17,Claude,High,400,0
+Backend,Sales Analytics API,Complete,2025-11-17,Claude,Medium,350,0
+Backend,FBR Service Layer,Complete,2025-11-17,Claude,Medium,210,0
+Backend,FBR Master Data APIs,Complete,2025-11-17,Claude,Medium,800,0
+Backend,FBR Validation API,Complete,2025-11-17,Claude,Medium,150,0
+Backend,FBR Submission API,Complete,2025-11-17,Claude,Medium,180,0
+Backend,User Settings API,Complete,2025-11-17,Claude,Medium,143,0
+Backend,Customer Ledger API,Placeholder,2025-11-16,Claude,Medium,45,4
+Backend,Customer Invoices API,Placeholder,2025-11-16,Claude,Low,40,2
+Backend,Purchase Order API,Incomplete,N/A,Unassigned,Critical,0,12
+Backend,Purchase Invoice API,Incomplete,N/A,Unassigned,Critical,0,10
+Backend,Payroll API,Incomplete,N/A,Unassigned,Critical,0,16
+Backend,Attendance API,Incomplete,N/A,Unassigned,High,0,8
+Backend,Leave Management API,Incomplete,N/A,Unassigned,High,0,6
+Database,User Model,Complete,2025-11-17,Claude,Critical,175,0
+Database,Account Model,Complete,2025-11-16,Claude,High,220,0
+Database,JournalEntry Model,Complete,2025-11-17,Claude,High,280,0
+Database,Customer Model,Complete,2025-11-16,Claude,High,180,0
+Database,Vendor Model,Complete,2025-11-16,Claude,High,160,0
+Database,Employee Model,Complete,2025-11-16,Claude,High,200,0
+Database,Item Model,Complete,2025-11-16,Claude,High,280,0
+Database,Category Model,Complete,2025-11-16,Claude,Medium,150,0
+Database,SalesOrder Model,Complete,2025-11-17,Claude,High,300,0
+Database,SalesInvoice Model,Complete,2025-11-17,Claude,High,350,0
+Database,Payment Model,Complete,2025-11-17,Claude,High,200,0
+Database,FBR Province Model,Complete,2025-11-17,Claude,Low,60,0
+Database,FBR HSCode Model,Complete,2025-11-17,Claude,Low,70,0
+Database,FBR Invoice Model,Complete,2025-11-17,Claude,Medium,120,0
+Database,FBR DocType Model,Complete,2025-11-17,Claude,Low,55,0
+Database,FBR TransType Model,Complete,2025-11-17,Claude,Low,55,0
+Database,FBR UOM Model,Complete,2025-11-17,Claude,Low,50,0
+Infrastructure,NextAuth Setup,Complete,2025-11-17,Claude,Critical,85,0
+Infrastructure,Middleware,Complete,2025-11-17,Claude,Critical,50,0
+Infrastructure,Theme System,Complete,2025-11-16,Claude,Low,350,0
+Infrastructure,Layout Components,Complete,2025-11-16,Claude,High,800,0
+Infrastructure,MongoDB Connection,Complete,2025-11-16,Claude,Critical,150,0
+Infrastructure,Testing Framework,Incomplete,N/A,Unassigned,High,0,20
+Infrastructure,CI/CD Pipeline,Incomplete,N/A,Unassigned,Medium,0,12
+Infrastructure,Staging Deployment,Incomplete,N/A,Unassigned,High,0,8
+Infrastructure,Production Deployment,Incomplete,N/A,Unassigned,Critical,0,16
+Features,Dark/Light Mode,Complete,2025-11-16,Claude,Low,350,0
+Features,Responsive Design,Complete,2025-11-16,Claude,High,0,0
+Features,Role-Based Access,Complete,2025-11-17,Claude,Critical,150,0
+Features,Session Management,Complete,2025-11-17,Claude,Critical,73,0
+Features,Password Hashing,Complete,2025-11-17,Claude,Critical,40,0
+Features,Double Entry Accounting,Complete,2025-11-17,Claude,Critical,500,0
+Features,Invoice Workflow,Complete,2025-11-17,Claude,High,400,0
+Features,Payment Processing,Complete,2025-11-17,Claude,High,350,0
+Features,Stock Management,Complete,2025-11-16,Claude,High,300,0
+Features,FBR Integration,Partial,2025-11-17,Claude,Medium,2393,0
+Features,Multi-Currency,Incomplete,N/A,Unassigned,Low,0,24
+Features,Audit Logging,Incomplete,N/A,Unassigned,Low,0,12
+Features,Email Notifications,Incomplete,N/A,Unassigned,Medium,0,16
+Features,PDF Export,Incomplete,N/A,Unassigned,High,0,12
