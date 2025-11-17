@@ -108,42 +108,46 @@ function NavItem({ item, isOpen }) {
       <Link
         href={item.href}
         className={cn(
-          'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+          'flex items-center gap-4 rounded-xl px-4 py-3.5 text-[15px] font-medium transition-all duration-200 group',
           isActive
-            ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
-            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+            ? 'bg-gradient-to-r from-blue-50 to-blue-100/50 dark:from-blue-900/40 dark:to-blue-800/20 text-blue-700 dark:text-blue-300 shadow-sm'
+            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:shadow-sm'
         )}
       >
-        <item.icon className="h-5 w-5" />
-        {isOpen && <span>{item.title}</span>}
+        <item.icon className={cn(
+          "h-5 w-5 transition-transform duration-200",
+          isActive ? "scale-110" : "group-hover:scale-105"
+        )} />
+        {isOpen && <span className="tracking-wide">{item.title}</span>}
       </Link>
     )
   }
 
   return (
-    <div>
+    <div className="space-y-1">
       <button
         onClick={() => setExpanded(!expanded)}
         className={cn(
-          'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-          'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+          'flex w-full items-center gap-4 rounded-xl px-4 py-3.5 text-[15px] font-medium transition-all duration-200 group',
+          'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:shadow-sm',
+          expanded && 'bg-gray-50 dark:bg-gray-800/30'
         )}
       >
-        <item.icon className="h-5 w-5" />
+        <item.icon className="h-5 w-5 transition-transform duration-200 group-hover:scale-105" />
         {isOpen && (
           <>
-            <span className="flex-1 text-left">{item.title}</span>
+            <span className="flex-1 text-left tracking-wide">{item.title}</span>
             {expanded ? (
-              <ChevronDown className="h-4 w-4" />
+              <ChevronDown className="h-4 w-4 transition-transform duration-200" />
             ) : (
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-4 w-4 transition-transform duration-200" />
             )}
           </>
         )}
       </button>
 
       {expanded && isOpen && (
-        <div className="ml-8 mt-1 space-y-1">
+        <div className="ml-9 mt-2 space-y-1 border-l-2 border-gray-200 dark:border-gray-700 pl-4">
           {item.subItems.map((subItem) => {
             const isActive = pathname === subItem.href
             return (
@@ -151,10 +155,10 @@ function NavItem({ item, isOpen }) {
                 key={subItem.href}
                 href={subItem.href}
                 className={cn(
-                  'block rounded-lg px-3 py-2 text-sm transition-colors',
+                  'block rounded-lg px-3.5 py-2.5 text-[14px] transition-all duration-200',
                   isActive
-                    ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                    ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-semibold shadow-sm border-l-2 border-blue-600 dark:border-blue-400 -ml-[18px] pl-4'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-gray-200 hover:translate-x-0.5'
                 )}
               >
                 {subItem.title}
@@ -173,7 +177,7 @@ export function Sidebar({ isOpen, onClose }) {
       {/* Overlay for mobile */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black bg-opacity-50 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden transition-opacity duration-300"
           onClick={onClose}
         />
       )}
@@ -181,12 +185,12 @@ export function Sidebar({ isOpen, onClose }) {
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed left-0 top-16 z-40 h-[calc(100vh-4rem)] border-r bg-white dark:bg-gray-900 dark:border-gray-800 transition-all duration-300',
-          isOpen ? 'w-64' : 'w-0 lg:w-20',
+          'fixed left-0 top-16 z-40 h-[calc(100vh-4rem)] border-r bg-white dark:bg-gray-900 dark:border-gray-800/50 transition-all duration-300 shadow-lg',
+          isOpen ? 'w-72' : 'w-0 lg:w-20',
           'lg:sticky'
         )}
       >
-        <div className="flex h-full flex-col gap-2 overflow-y-auto p-4">
+        <div className="flex h-full flex-col gap-1.5 overflow-y-auto p-4 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-transparent">
           {menuItems.map((item, index) => (
             <NavItem key={index} item={item} isOpen={isOpen} />
           ))}
