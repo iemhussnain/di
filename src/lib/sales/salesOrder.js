@@ -167,6 +167,7 @@ export async function createInvoiceFromOrder(orderId, options = {}) {
 
 /**
  * Reduce inventory when order is confirmed
+ * Validates stock availability before reducing
  * @param {String} orderId - Sales order ID
  * @param {Boolean} isRegistered - Whether stock is registered
  * @returns {Promise<void>}
@@ -182,12 +183,48 @@ export async function reduceInventoryForOrder(orderId, isRegistered = true) {
   session.startTransaction()
 
   try {
+    // First, validate stock availability for all items
+    const insufficientStockItems = []
+
     for (const line of salesOrder.lines) {
       const item = await Item.findById(line.item_id).session(session)
 
       if (!item) {
         throw new Error(`Item not found: ${line.item_id}`)
       }
+
+      // Check if item is active
+      if (!item.is_active) {
+        throw new Error(`Item ${item.item_name} is not active`)
+      }
+
+      // Check stock availability
+      const availableStock = item.current_stock || 0
+      if (availableStock < line.quantity) {
+        insufficientStockItems.push({
+          item_name: item.item_name,
+          item_code: item.item_code,
+          available: availableStock,
+          requested: line.quantity,
+          shortage: line.quantity - availableStock,
+        })
+      }
+    }
+
+    // If any items have insufficient stock, abort
+    if (insufficientStockItems.length > 0) {
+      const errorMessages = insufficientStockItems.map(
+        (item) =>
+          `${item.item_name} (${item.item_code}): Available ${item.available}, Requested ${item.requested}, Short ${item.shortage}`
+      )
+      throw new Error(
+        `Insufficient stock for the following items:\n${errorMessages.join('\n')}`
+      )
+    }
+
+    // All items have sufficient stock, proceed with reduction
+    for (const line of salesOrder.lines) {
+      const item = await Item.findById(line.item_id).session(session)
 
       // Reduce stock
       await item.updateStock(line.quantity, 0, isRegistered, false)

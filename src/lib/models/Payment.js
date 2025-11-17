@@ -78,7 +78,7 @@ const PaymentSchema = new mongoose.Schema(
       trim: true,
     },
 
-    // Reference to Invoice (if paying against invoice)
+    // Reference to Invoice (if paying against single invoice - legacy)
     invoice_type: {
       type: String,
       enum: ['SalesInvoice', 'PurchaseInvoice'],
@@ -90,6 +90,42 @@ const PaymentSchema = new mongoose.Schema(
     },
     invoice_no: {
       type: String,
+    },
+
+    // Payment Allocations (supports multiple invoices)
+    allocations: [
+      {
+        invoice_type: {
+          type: String,
+          enum: ['SalesInvoice', 'PurchaseInvoice'],
+          required: true,
+        },
+        invoice_id: {
+          type: mongoose.Schema.Types.ObjectId,
+          required: true,
+          refPath: 'allocations.invoice_type',
+        },
+        invoice_no: {
+          type: String,
+          required: true,
+        },
+        allocated_amount: {
+          type: Number,
+          required: true,
+          min: [0.01, 'Allocated amount must be greater than 0'],
+        },
+        allocation_date: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+
+    // Unallocated amount (advance payment)
+    unallocated_amount: {
+      type: Number,
+      default: 0,
+      min: [0, 'Unallocated amount cannot be negative'],
     },
 
     // Cash/Bank Account
@@ -182,6 +218,28 @@ PaymentSchema.virtual('can_be_posted').get(function () {
 // Virtual: Can be cancelled
 PaymentSchema.virtual('can_be_cancelled').get(function () {
   return this.status !== 'Cancelled' && !this.posted
+})
+
+// Virtual: Total allocated amount
+PaymentSchema.virtual('total_allocated').get(function () {
+  if (!this.allocations || this.allocations.length === 0) return 0
+  return this.allocations.reduce((sum, allocation) => sum + allocation.allocated_amount, 0)
+})
+
+// Virtual: Calculated unallocated amount
+PaymentSchema.virtual('calculated_unallocated').get(function () {
+  const allocated = this.total_allocated
+  return this.amount - allocated
+})
+
+// Virtual: Is fully allocated
+PaymentSchema.virtual('is_fully_allocated').get(function () {
+  return this.calculated_unallocated <= 0.01 // Allow for rounding errors
+})
+
+// Virtual: Is advance payment (no allocations)
+PaymentSchema.virtual('is_advance').get(function () {
+  return !this.allocations || this.allocations.length === 0
 })
 
 // Auto-generate payment number

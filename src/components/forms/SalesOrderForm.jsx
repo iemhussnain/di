@@ -118,6 +118,8 @@ export default function SalesOrderForm({ initialData = null, onSubmit, onCancel 
         newLines[index].description = item.description || ''
         newLines[index].unit_price = item.selling_price || 0
         newLines[index].tax_percentage = item.tax_rate || 18
+        // Store current stock for validation
+        newLines[index].current_stock = item.current_stock || 0
       }
     }
 
@@ -140,6 +142,69 @@ export default function SalesOrderForm({ initialData = null, onSubmit, onCancel 
     line.line_total = amountAfterDiscount + line.tax_amount
 
     setFormData((prev) => ({ ...prev, lines: newLines }))
+  }
+
+  // Get stock availability for an item in a line
+  const getItemStock = (line) => {
+    if (!line.item_id) return null
+    const item = items.find((i) => i._id === line.item_id)
+    return item ? item.current_stock || 0 : 0
+  }
+
+  // Check if any line has insufficient stock
+  const hasStockIssues = () => {
+    return formData.lines.some((line) => {
+      if (!line.item_id) return false
+      const stock = getItemStock(line)
+      return line.quantity > stock
+    })
+  }
+
+  // Get stock warning message
+  const getStockWarningMessage = () => {
+    const insufficientItems = formData.lines
+      .filter((line) => {
+        if (!line.item_id) return false
+        const stock = getItemStock(line)
+        return line.quantity > stock
+      })
+      .map((line) => {
+        const item = items.find((i) => i._id === line.item_id)
+        const stock = getItemStock(line)
+        return `${item?.item_name}: Requested ${line.quantity}, Available ${stock}`
+      })
+
+    if (insufficientItems.length === 0) return null
+
+    return `Insufficient stock for the following items:\n${insufficientItems.join('\n')}`
+  }
+
+  // Check credit limit
+  const exceedsCreditLimit = () => {
+    if (!selectedCustomer || !selectedCustomer.credit_limit) return false
+    const currentBalance = selectedCustomer.current_balance || 0
+    const orderTotal = calculateTotals().grandTotal || 0
+    const totalOutstanding = Math.abs(currentBalance) + orderTotal
+    return totalOutstanding > selectedCustomer.credit_limit
+  }
+
+  // Get credit limit warning message
+  const getCreditLimitWarning = () => {
+    if (!selectedCustomer || !exceedsCreditLimit()) return null
+
+    const currentBalance = selectedCustomer.current_balance || 0
+    const orderTotal = calculateTotals().grandTotal || 0
+    const totalOutstanding = Math.abs(currentBalance) + orderTotal
+    const creditLimit = selectedCustomer.credit_limit
+    const exceededBy = totalOutstanding - creditLimit
+
+    return {
+      currentBalance: Math.abs(currentBalance),
+      orderTotal,
+      totalOutstanding,
+      creditLimit,
+      exceededBy,
+    }
   }
 
   const handleAddLine = () => {
@@ -209,6 +274,61 @@ export default function SalesOrderForm({ initialData = null, onSubmit, onCancel 
       {error && (
         <Alert variant="destructive">
           <p>{error}</p>
+        </Alert>
+      )}
+
+      {/* Stock Warning */}
+      {hasStockIssues() && (
+        <Alert variant="warning" className="bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-yellow-600 dark:text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">Insufficient Stock</h3>
+              <div className="mt-2 text-sm text-yellow-700 dark:text-yellow-300 whitespace-pre-line">
+                {getStockWarningMessage()}
+              </div>
+            </div>
+          </div>
+        </Alert>
+      )}
+
+      {/* Credit Limit Warning */}
+      {exceedsCreditLimit() && (
+        <Alert variant="warning" className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-600 dark:text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800 dark:text-red-200">Credit Limit Exceeded</h3>
+              <div className="mt-2 text-sm text-red-700 dark:text-red-300">
+                {(() => {
+                  const warning = getCreditLimitWarning()
+                  if (!warning) return null
+                  return (
+                    <div className="space-y-1">
+                      <div>Current Outstanding: PKR {warning.currentBalance.toLocaleString('en-PK', {minimumFractionDigits: 2})}</div>
+                      <div>This Order: PKR {warning.orderTotal.toLocaleString('en-PK', {minimumFractionDigits: 2})}</div>
+                      <div className="font-semibold">Total Outstanding: PKR {warning.totalOutstanding.toLocaleString('en-PK', {minimumFractionDigits: 2})}</div>
+                      <div>Credit Limit: PKR {warning.creditLimit.toLocaleString('en-PK', {minimumFractionDigits: 2})}</div>
+                      <div className="font-bold text-red-900 dark:text-red-200 mt-2">
+                        Exceeded by: PKR {warning.exceededBy.toLocaleString('en-PK', {minimumFractionDigits: 2})}
+                      </div>
+                      <div className="mt-2 text-xs">
+                        This order cannot be saved as it exceeds the customer's credit limit.
+                      </div>
+                    </div>
+                  )
+                })()}
+              </div>
+            </div>
+          </div>
         </Alert>
       )}
 
@@ -445,9 +565,22 @@ export default function SalesOrderForm({ initialData = null, onSubmit, onCancel 
                         step="0.01"
                         value={line.quantity}
                         onChange={(e) => handleLineChange(index, 'quantity', parseFloat(e.target.value) || 0)}
-                        className="text-sm text-right w-20"
+                        className={`text-sm text-right w-20 ${
+                          line.item_id && line.quantity > getItemStock(line)
+                            ? 'border-red-500 dark:border-red-600'
+                            : ''
+                        }`}
                         required
                       />
+                      {line.item_id && (
+                        <div className={`text-xs mt-1 ${
+                          line.quantity > getItemStock(line)
+                            ? 'text-red-600 dark:text-red-400 font-semibold'
+                            : 'text-gray-500 dark:text-gray-400'
+                        }`}>
+                          Stock: {getItemStock(line)}
+                        </div>
+                      )}
                     </td>
                     <td className="px-2 py-3">
                       <Input
