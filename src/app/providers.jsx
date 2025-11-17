@@ -5,14 +5,16 @@
 
 'use client'
 
+import { SessionProvider } from 'next-auth/react'
 import { Toaster } from 'react-hot-toast'
 import { ThemeProvider } from '@/components/theme/ThemeProvider'
 
 export function Providers({ children }) {
   return (
-    <ThemeProvider>
-      {children}
-      <Toaster
+    <SessionProvider>
+      <ThemeProvider>
+        {children}
+        <Toaster
         position="top-right"
         toastOptions={{
           // Light mode styles
@@ -37,6 +39,7 @@ export function Providers({ children }) {
           },
         }}
       />
-    </ThemeProvider>
+      </ThemeProvider>
+    </SessionProvider>
   )
 }

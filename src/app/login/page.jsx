@@ -7,6 +7,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { signIn } from 'next-auth/react'
 import Link from 'next/link'
 import { Button, Input, Label, Card, CardHeader, CardTitle, CardContent } from '@/components/ui'
 import { Eye, EyeOff } from 'lucide-react'
@@ -14,8 +15,8 @@ import toast from 'react-hot-toast'
 
 export default function LoginPage() {
   const router = useRouter()
-  const [email, setEmail] = useState('admin@erp.com')
-  const [password, setPassword] = useState('admin123')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -23,22 +24,33 @@ export default function LoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
+
+    if (!email || !password) {
+      setError('Please enter both email and password')
+      return
+    }
+
     setLoading(true)
 
     try {
-      // Simple authentication for now
-      // In production, this will call NextAuth API
-      if (email === 'admin@erp.com' && password === 'admin123') {
+      const result = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
+      })
+
+      if (result?.error) {
+        setError(result.error)
+        toast.error(result.error)
+      } else if (result?.ok) {
         toast.success('Login successful!')
         router.push('/dashboard')
         router.refresh()
-      } else {
-        setError('Invalid email or password')
-        toast.error('Invalid email or password')
       }
     } catch (err) {
       setError('An error occurred during login')
       toast.error('An error occurred during login')
+      console.error(err)
     } finally {
       setLoading(false)
     }
@@ -116,11 +128,11 @@ export default function LoginPage() {
               </Link>
             </div>
 
-            {/* Demo Credentials */}
-            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800 text-center text-sm text-gray-500 dark:text-gray-400">
-              <p className="font-medium mb-1">Demo Credentials:</p>
-              <p>Email: admin@erp.com</p>
-              <p>Password: admin123</p>
+            {/* Forgot Password Link */}
+            <div className="text-center text-sm">
+              <Link href="/forgot-password" className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400">
+                Forgot password?
+              </Link>
             </div>
           </form>
         </CardContent>

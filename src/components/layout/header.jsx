@@ -7,11 +7,17 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useSession, signOut } from 'next-auth/react'
 import { Menu, Bell, User, LogOut, Settings } from 'lucide-react'
 import { ThemeToggle } from '@/components/theme/ThemeToggle'
 
 export function Header({ onMenuClick }) {
+  const { data: session } = useSession()
   const [showUserMenu, setShowUserMenu] = useState(false)
+
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: '/login' })
+  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-white dark:bg-gray-900 dark:border-gray-800">
@@ -53,8 +59,12 @@ export function Header({ onMenuClick }) {
                 <User className="h-5 w-5 text-white" />
               </div>
               <div className="hidden md:block text-left">
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Admin User</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Administrator</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  {session?.user?.name || 'User'}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {session?.user?.role || 'User'}
+                </p>
               </div>
             </button>
 
@@ -68,7 +78,10 @@ export function Header({ onMenuClick }) {
                   <Settings className="h-4 w-4" />
                   Settings
                 </Link>
-                <button className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
                   <LogOut className="h-4 w-4" />
                   Logout
                 </button>

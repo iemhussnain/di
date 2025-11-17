@@ -1,112 +1,72 @@
 /**
  * User Session Utility
  *
- * TODO: CRITICAL SECURITY ISSUE
- * This file contains a MOCK user session that returns a hardcoded user ID.
- * This MUST be replaced with proper authentication before production deployment.
- *
- * Recommended implementations:
- * 1. NextAuth.js for session management
- * 2. JWT-based authentication
- * 3. OAuth providers (Google, Microsoft, etc.)
- *
- * Steps to implement proper authentication:
- * 1. Install NextAuth: npm install next-auth
- * 2. Create /app/api/auth/[...nextauth]/route.js
- * 3. Configure providers and session strategy
- * 4. Replace getCurrentUserId() with actual session retrieval
- * 5. Add middleware for protected routes
- * 6. Update all components to use useSession() hook
+ * Provides session management using NextAuth.js
+ * Server-side and client-side session utilities
  */
 
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+
 /**
- * Get current user ID
+ * Get current user ID (server-side)
  *
- * @returns {string} User ID
- *
- * WARNING: This is a MOCK implementation
- * Replace with actual session management in production
- *
- * Example with NextAuth:
- * ```javascript
- * import { getServerSession } from "next-auth/next"
- * import { authOptions } from "@/app/api/auth/[...nextauth]/route"
- *
- * export async function getCurrentUserId() {
- *   const session = await getServerSession(authOptions)
- *   if (!session?.user?.id) {
- *     throw new Error('Unauthorized')
- *   }
- *   return session.user.id
- * }
- * ```
+ * @returns {Promise<string>} User ID
+ * @throws {Error} If user is not authenticated
  */
-export function getCurrentUserId() {
-  // TODO: Replace with actual session management
-  // This is a MOCK user ID for development only
-  console.warn(
-    '🚨 SECURITY WARNING: Using hardcoded user ID. Implement proper authentication before production!'
-  )
-  return '507f1f77bcf86cd799439011'
+export async function getCurrentUserId() {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized - Please login')
+  }
+  return session.user.id
+}
+
+/**
+ * Get current user session (server-side)
+ *
+ * @returns {Promise<Object|null>} User session object or null
+ */
+export async function getCurrentUser() {
+  const session = await getServerSession(authOptions)
+  return session?.user || null
 }
 
 /**
  * Hook for client-side user session
  *
- * WARNING: This is a MOCK implementation
- * Replace with actual session hook in production
- *
- * Example with NextAuth:
- * ```javascript
- * import { useSession } from 'next-auth/react'
- *
- * export function useCurrentUser() {
- *   const { data: session, status } = useSession()
- *   return {
- *     userId: session?.user?.id,
- *     user: session?.user,
- *     isLoading: status === 'loading',
- *     isAuthenticated: status === 'authenticated'
- *   }
- * }
- * ```
+ * @returns {Object} User session object with helper properties
  */
 export function useCurrentUser() {
-  // TODO: Replace with actual session hook
-  console.warn(
-    '🚨 SECURITY WARNING: Using hardcoded user ID. Implement proper authentication before production!'
-  )
-  return {
-    userId: '507f1f77bcf86cd799439011',
-    user: {
-      id: '507f1f77bcf86cd799439011',
-      name: 'Mock User',
-      email: 'mock@example.com',
-    },
-    isLoading: false,
-    isAuthenticated: true,
-  }
+  // Note: This must be imported and used from 'next-auth/react' directly in client components
+  // This is a re-export for convenience
+  // Example usage:
+  // import { useSession } from 'next-auth/react'
+  // const { data: session, status } = useSession()
+
+  throw new Error('Use useSession from next-auth/react directly in client components')
 }
 
 /**
  * Check if user is authenticated (server-side)
  *
- * WARNING: This is a MOCK implementation
- * Always returns true - NO SECURITY
+ * @returns {Promise<boolean>} Whether user is authenticated
  */
 export async function isAuthenticated() {
-  // TODO: Implement actual authentication check
-  return true
+  const session = await getServerSession(authOptions)
+  return !!session?.user
 }
 
 /**
- * Require authentication middleware
+ * Require authentication middleware (server-side)
  *
- * WARNING: This is a MOCK implementation
- * Does nothing - NO SECURITY
+ * @throws {Error} If user is not authenticated
+ * @returns {Promise<Object>} User session
  */
 export async function requireAuth() {
-  // TODO: Implement actual authentication requirement
-  // Should redirect to login if not authenticated
-  return true
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    throw new Error('Unauthorized - Authentication required')
+  }
+  return session
 }
