@@ -329,3 +329,48 @@ export async function validateJournalEntry(entryId) {
     warnings,
   }
 }
+
+/**
+ * Get ledger summary for all accounts
+ * @param {Date} startDate - Start date (optional)
+ * @param {Date} endDate - End date (optional)
+ * @param {Object} options - Additional options
+ * @returns {Promise<Array>}
+ */
+export async function getLedgerSummary(startDate = null, endDate = null, options = {}) {
+  // Get all active accounts that are not headers
+  const accounts = await Account.find({ is_active: true, is_header: false }).sort({
+    account_code: 1,
+  })
+
+  const summary = []
+
+  for (const account of accounts) {
+    // Get ledger for this account
+    const ledger = await getAccountLedger(account._id.toString(), startDate, endDate)
+
+    // Calculate total debits and credits
+    const totalDebits = ledger.ledger_lines.reduce((sum, line) => sum + line.debit, 0)
+    const totalCredits = ledger.ledger_lines.reduce((sum, line) => sum + line.credit, 0)
+    const netMovement = totalDebits - totalCredits
+
+    // Only include accounts with activity or non-zero balances
+    if (options.showZeroBalances || ledger.closing_balance !== 0 || netMovement !== 0) {
+      summary.push({
+        account_id: account._id,
+        account_code: account.account_code,
+        account_name: account.account_name,
+        account_type: account.account_type,
+        normal_balance: account.normal_balance,
+        opening_balance: ledger.opening_balance,
+        total_debits: totalDebits,
+        total_credits: totalCredits,
+        net_movement: netMovement,
+        closing_balance: ledger.closing_balance,
+        transaction_count: ledger.ledger_lines.length,
+      })
+    }
+  }
+
+  return summary
+}
