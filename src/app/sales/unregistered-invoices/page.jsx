@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { PageTransition, SlideIn, FadeIn, StaggerContainer, StaggerTableRow } from '@/components/animations'
+import { TableSkeleton } from '@/components/animations/SkeletonLoader'
 
 export default function UnregisteredInvoicesPage() {
   const router = useRouter()
@@ -106,9 +108,9 @@ export default function UnregisteredInvoicesPage() {
   }
 
   return (
-    <div className="space-y-8 p-6 max-w-[1600px] mx-auto">
+    <PageTransition className="space-y-8 p-6 max-w-[1600px] mx-auto">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+      <SlideIn direction="down" className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
         <div className="space-y-2">
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
@@ -131,11 +133,12 @@ export default function UnregisteredInvoicesPage() {
           </svg>
           New Invoice
         </Link>
-      </div>
+      </SlideIn>
 
       {/* Filters */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border border-gray-100 dark:border-gray-700 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-5">Filters</h2>
+      <FadeIn delay={0.1}>
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border border-gray-100 dark:border-gray-700 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-5">Filters</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
           <div className="space-y-2">
             <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
@@ -191,28 +194,27 @@ export default function UnregisteredInvoicesPage() {
             />
           </div>
         </div>
-      </div>
+        </div>
+      </FadeIn>
 
       {/* Error State */}
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 flex items-center gap-3">
-          <svg className="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span className="text-red-700 dark:text-red-400 font-medium">{error}</span>
-        </div>
+        <FadeIn delay={0.15}>
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 flex items-center gap-3">
+            <svg className="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="text-red-700 dark:text-red-400 font-medium">{error}</span>
+          </div>
+        </FadeIn>
       )}
 
       {/* Invoices Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border border-gray-100 dark:border-gray-700 overflow-hidden">
-        {loading ? (
-          <div className="p-16 text-center">
-            <div className="inline-flex items-center gap-3">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <span className="text-gray-600 dark:text-gray-400 font-medium">Loading invoices...</span>
-            </div>
-          </div>
-        ) : invoices.length === 0 ? (
+      <FadeIn delay={0.2}>
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border border-gray-100 dark:border-gray-700 overflow-hidden">
+          {loading ? (
+            <TableSkeleton rows={5} columns={7} />
+          ) : invoices.length === 0 ? (
           <div className="p-16 text-center">
             <div className="max-w-md mx-auto space-y-4">
               <svg className="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -260,9 +262,10 @@ export default function UnregisteredInvoicesPage() {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                  {invoices.map((invoice) => (
-                    <tr key={invoice._id} className="hover:bg-blue-50/50 dark:hover:bg-gray-700/50 transition-colors duration-150">
+                <StaggerContainer staggerDelay={0.05}>
+                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    {invoices.map((invoice) => (
+                      <StaggerTableRow key={invoice._id} className="hover:bg-blue-50/50 dark:hover:bg-gray-700/50 transition-colors duration-150">
                       <td className="px-6 py-5 whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           <Link
@@ -317,9 +320,10 @@ export default function UnregisteredInvoicesPage() {
                           </>
                         )}
                       </td>
-                    </tr>
-                  ))}
-                </tbody>
+                      </StaggerTableRow>
+                    ))}
+                  </tbody>
+                </StaggerContainer>
               </table>
             </div>
 
@@ -350,7 +354,8 @@ export default function UnregisteredInvoicesPage() {
             )}
           </>
         )}
-      </div>
-    </div>
+        </div>
+      </FadeIn>
+    </PageTransition>
   )
 }
