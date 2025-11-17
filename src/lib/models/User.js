@@ -69,6 +69,33 @@ const UserSchema = new mongoose.Schema(
       type: String,
       select: false,
     },
+    // FBR Tax Information
+    company_ntn: {
+      type: String,
+      match: [/^\d{7}$/, 'NTN must be 7 digits'],
+    },
+    company_strn: {
+      type: String,
+      match: [/^\d{2}-\d{2}-\d{4}-\d{3}-\d{2}$/, 'STRN format: 00-00-0000-000-00'],
+    },
+    company_ref_no: {
+      type: String,
+      match: [/^\d{7}-\d$/, 'Reference No format: 0000000-0'],
+    },
+    company_province: String,
+    company_address: String,
+    fbr_sandbox_token: {
+      type: String,
+      select: false,
+    },
+    fbr_production_token: {
+      type: String,
+      select: false,
+    },
+    fbr_registration_status: {
+      type: String,
+      enum: ['Active', 'Inactive', 'Not Registered'],
+    },
   },
   {
     timestamps: true,

@@ -96,6 +96,21 @@ const CustomerSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+
+    // FBR Tax Information
+    ref_no: {
+      type: String,
+      match: [/^\d{7}-\d$/, 'Reference No format: 0000000-0'],
+    },
+    fbr_registration_status: {
+      type: String,
+      enum: ['Active', 'Inactive', 'Not Registered'],
+    },
+    buyer_registration_type: {
+      type: String,
+      enum: ['Registered', 'Unregistered'],
+      default: 'Unregistered',
+    },
   },
   {
     timestamps: true,
